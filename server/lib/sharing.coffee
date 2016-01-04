@@ -353,7 +353,7 @@ module.exports.replicateDocs = (params, callback) ->
     options =
         method: 'POST'
         headers: headers
-        uri: dbUrl + "/_sharing/replication"
+        uri: dbUrl + "/_replicate"
     options['body'] = JSON.stringify repSourceToTarget
 
     request2 options, (err, res, body) ->
