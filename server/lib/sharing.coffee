@@ -323,14 +323,18 @@ module.exports.replicateDocs = (params, callback) ->
 
     console.log 'params : ' + JSON.stringify params
 
-    unless params.url? and params.pwd? and params.docIDs?
+
+    unless params.url? and params.pwd? and params.docIDs? and params.id?
         err = new Error 'Parameters missing'
         err.status = 400
         callback err
 
+    auth = params.id + ":" + params.pwd
+    url = params.url.replace "://", "://" + auth + "@" 
+
     repSourceToTarget =
         source: "cozy"
-        target: params.url + "/replication" # should be /replication but oh well... :(
+        target: url + "/sharing/replication/" 
         continuous: params.sync or false
         doc_ids: params.docIDs
 
@@ -342,13 +346,14 @@ module.exports.replicateDocs = (params, callback) ->
         doc_ids: ids
     ###
     console.log 'rep data : ' + JSON.stringify repSourceToTarget
-
+    
     headers =
         'Content-Type': 'application/json'
+
     options =
         method: 'POST'
         headers: headers
-        uri: dbUrl + "/_replicate"
+        uri: dbUrl + "/_sharing/replication"
     options['body'] = JSON.stringify repSourceToTarget
 
     request2 options, (err, res, body) ->
