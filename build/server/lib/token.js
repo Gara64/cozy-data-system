@@ -238,7 +238,8 @@ initHomeProxy = function(callback) {
     "encryptedkeys": "authorized",
     "stackapplication": "authorized",
     "send mail to user": "authorized",
-    "send mail from user": "authorized"
+    "send mail from user": "authorized",
+    "usersharing": "authorized"
   };
   tokens['proxy'] = token;
   permissions.proxy = {
@@ -248,7 +249,8 @@ initHomeProxy = function(callback) {
     "cozyinstance": "authorized",
     "device": "authorized",
     "usetracker": "authorized",
-    "send mail to user": "authorized"
+    "send mail to user": "authorized",
+    "usersharing": "authorized"
   };
   return callback(null);
 };

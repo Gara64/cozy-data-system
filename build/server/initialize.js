@@ -24,13 +24,8 @@ module.exports = function(app, server, callback) {
         }
         return init.addAccesses(function(err) {
           if (err != null) {
-            log.error(err);
+            return log.error(err);
           }
-          return init.addSharingRules(function(err) {
-            if (err != null) {
-              return log.error(err);
-            }
-          });
 
           /*
           if process.env.USE_PLUGDB
