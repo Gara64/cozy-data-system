@@ -16,8 +16,8 @@ module.exports = (app, server, callback) ->
                 init.addAccesses (err) ->
                     log.error err if err?
                     #sharing rules
-                    init.addSharingRules (err) ->
-                        log.error err if err?
+                    #init.addSharingRules (err) ->
+                        #log.error err if err?
                     ###
                     if process.env.USE_PLUGDB
                         #plugdb

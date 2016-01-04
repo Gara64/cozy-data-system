@@ -231,6 +231,7 @@ initHomeProxy = (callback) ->
         "stackapplication": "authorized"
         "send mail to user": "authorized"
         "send mail from user": "authorized"
+        "usersharing": "authorized"
     # Add proxy token and permissions
     tokens['proxy'] = token
     permissions.proxy =
@@ -241,6 +242,7 @@ initHomeProxy = (callback) ->
         "device": "authorized"
         "usetracker": "authorized"
         "send mail to user": "authorized"
+        "usersharing": "authorized"
     callback null
 
 
