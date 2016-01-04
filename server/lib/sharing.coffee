@@ -20,9 +20,7 @@ module.exports.getDomain = (callback) ->
 
         if instance?[0]?.value.domain?
             domain = instance[0].value.domain
-            if not domain.indexOf 'http' > -1
-                console.log 'domain : ' + domain
-                domain = "https://#{domain}/"
+            domain = "https://#{domain}/" if not domain.indexOf 'http' > -1
             callback null, domain
         else
             callback null
