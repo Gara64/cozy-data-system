@@ -27,8 +27,7 @@ module.exports.getDomain = function(callback) {
     }
     if ((instance != null ? (ref = instance[0]) != null ? ref.value.domain : void 0 : void 0) != null) {
       domain = instance[0].value.domain;
-      if (!domain.indexOf('http' > -1)) {
-        console.log('domain : ' + domain);
+      if (!domain.indexOf('http') > -1) {
         domain = "https://" + domain + "/";
       }
       return callback(null, domain);
