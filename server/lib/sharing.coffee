@@ -332,7 +332,7 @@ module.exports.replicateDocs = (params, callback) ->
     auth = params.id + ":" + params.pwd
     url = params.url.replace "://", "://" + auth + "@" 
 
-    repSourceToTarget =
+    replication =
         source: "cozy"
         target: url + "/sharing/replication/" 
         continuous: params.sync or false
@@ -347,24 +347,11 @@ module.exports.replicateDocs = (params, callback) ->
     ###
     console.log 'rep data : ' + JSON.stringify repSourceToTarget
     
-    headers =
-        'Content-Type': 'application/json'
-
-    options =
-        method: 'POST'
-        headers: headers
-        uri: dbUrl + "/_replicate"
-    options['body'] = JSON.stringify repSourceToTarget
-
-    request2 options, (err, res, body) ->
+    db.replicate replication.target, replication, (err, res) ->
         if err? then callback err
-        else if not body.ok
-            console.log JSON.stringify body
-            callback null, body
         else
-            console.log 'Replication from source succeeded \o/'
-            repID = body._local_id
-            callback null, repID
+            console.log JSON.stringify res
+            callback null, res
 
 # Update the sharing doc on the activeReplications field
 updateActiveRep = (shareID, activeReplications, callback) ->
