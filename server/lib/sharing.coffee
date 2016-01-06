@@ -20,7 +20,7 @@ module.exports.getDomain = (callback) ->
 
         if instance?[0]?.value.domain?
             domain = instance[0].value.domain
-            domain = "https://#{domain}/" if not domain.indexOf('http') > -1
+            domain = "https://#{domain}/" if not (domain.indexOf('http') > -1)
             callback null, domain
         else
             callback null
@@ -281,7 +281,7 @@ module.exports.notifyTarget = (targetURL, params, callback) ->
 module.exports.answerHost = (hostURL, answer, callback) ->
     remote = request.newClient hostURL
     remote.post "sharing/answer", answer, (err, result, body) ->
-        console.log 'body : ' + JSON.stringify body
+        #console.log 'body : ' + JSON.stringify body
         callback err, result, body
 
 
@@ -345,7 +345,7 @@ module.exports.replicateDocs = (params, callback) ->
         continuous: true
         doc_ids: ids
     ###
-    console.log 'rep data : ' + JSON.stringify repSourceToTarget
+    console.log 'rep data : ' + JSON.stringify replication
     
     db.replicate replication.target, replication, (err, res) ->
         if err? then callback err

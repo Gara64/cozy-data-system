@@ -27,7 +27,7 @@ module.exports.getDomain = function(callback) {
     }
     if ((instance != null ? (ref = instance[0]) != null ? ref.value.domain : void 0 : void 0) != null) {
       domain = instance[0].value.domain;
-      if (!domain.indexOf('http') > -1) {
+      if (!(domain.indexOf('http') > -1)) {
         domain = "https://" + domain + "/";
       }
       return callback(null, domain);
@@ -297,7 +297,6 @@ module.exports.answerHost = function(hostURL, answer, callback) {
   var remote;
   remote = request.newClient(hostURL);
   return remote.post("sharing/answer", answer, function(err, result, body) {
-    console.log('body : ' + JSON.stringify(body));
     return callback(err, result, body);
   });
 };
@@ -332,16 +331,18 @@ module.exports.targetAnswer = function(req, res, next) {
 };
 
 module.exports.replicateDocs = function(params, callback) {
-  var err, headers, options, repSourceToTarget;
+  var auth, err, replication, url;
   console.log('params : ' + JSON.stringify(params));
-  if (!((params.url != null) && (params.pwd != null) && (params.docIDs != null))) {
+  if (!((params.url != null) && (params.pwd != null) && (params.docIDs != null) && (params.id != null))) {
     err = new Error('Parameters missing');
     err.status = 400;
     callback(err);
   }
-  repSourceToTarget = {
+  auth = params.id + ":" + params.pwd;
+  url = params.url.replace("://", "://" + auth + "@");
+  replication = {
     source: "cozy",
-    target: params.url + "/replication",
+    target: url + "/sharing/replication/",
     continuous: params.sync || false,
     doc_ids: params.docIDs
   };
@@ -352,27 +353,13 @@ module.exports.replicateDocs = function(params, callback) {
       continuous: true
       doc_ids: ids
    */
-  console.log('rep data : ' + JSON.stringify(repSourceToTarget));
-  headers = {
-    'Content-Type': 'application/json'
-  };
-  options = {
-    method: 'POST',
-    headers: headers,
-    uri: dbUrl + "/_replicate"
-  };
-  options['body'] = JSON.stringify(repSourceToTarget);
-  return request2(options, function(err, res, body) {
-    var repID;
+  console.log('rep data : ' + JSON.stringify(replication));
+  return db.replicate(replication.target, replication, function(err, res) {
     if (err != null) {
       return callback(err);
-    } else if (!body.ok) {
-      console.log(JSON.stringify(body));
-      return callback(null, body);
     } else {
-      console.log('Replication from source succeeded \o/');
-      repID = body._local_id;
-      return callback(null, repID);
+      console.log(JSON.stringify(res));
+      return callback(null, res);
     }
   });
 };
