@@ -156,12 +156,8 @@ module.exports.remove = function(req, res, next) {
 };
 
 module.exports.convert = function(req, res, next) {
-<<<<<<< HEAD
-  var binaries, createBinary, id, removeOldAttach;
-  console.log('convert binary');
-=======
   var binaries, createBinary, id, keys, removeOldAttach;
->>>>>>> upstream/master
+  console.log('convert binary');
   binaries = {};
   id = req.doc.id;
   removeOldAttach = function(attach, binaryId, callback) {

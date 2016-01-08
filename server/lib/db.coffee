@@ -142,11 +142,7 @@ module.exports = (callback) ->
         # Initialize request view.
         request.init (err) ->
             # Initialize application access.
-<<<<<<< HEAD
-            initTokens (tokens, permissions) =>
-                callback() if callback?
-=======
             initTokens (tokens, permissions) ->
                 callback?()
 
->>>>>>> upstream/master
+

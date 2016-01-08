@@ -168,9 +168,6 @@ module.exports.proxy = (req, res, next) ->
                     permissions = true
                     stream.emit 'data', Buffer.concat(data)
 
-<<<<<<< HEAD
-    req.on 'end', () =>
-=======
+
     req.on 'end', ->
->>>>>>> upstream/master
         stream.emit 'end'

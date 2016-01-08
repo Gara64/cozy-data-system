@@ -27,20 +27,6 @@ module.exports = function(app, server, callback) {
           if (err != null) {
             log.error(err);
           }
-<<<<<<< HEAD
-
-          /*
-          if process.env.USE_PLUGDB
-              #plugdb
-              init.initPlugDB (err) ->
-                  log.error err if err?
-                  #sharing rules
-                  init.addSharingRules (err) ->
-                      log.error err if err?
-                      init.insertSharesPlugDB (err) ->
-                          log.error err if err?
-           */
-=======
           return indexer.initialize(function(err) {
             if (err != null) {
               log.error(err);
@@ -49,7 +35,6 @@ module.exports = function(app, server, callback) {
               return callback(app, server);
             }
           });
->>>>>>> upstream/master
         });
       });
     });

@@ -4,12 +4,9 @@ db = require('../helpers/db_connect_helper').db_connect()
 feed = require '../lib/feed'
 dbHelper = require '../lib/db_remove_helper'
 encryption = require '../lib/encryption'
-<<<<<<< HEAD
 client = require '../lib/indexer'
 sharing = require '../lib/sharing'
-=======
 account = require './accounts'
->>>>>>> upstream/master
 
 ## Before and after methods
 

@@ -247,7 +247,6 @@ initializeDSView = (callback) ->
                 }
                 """
 
-<<<<<<< HEAD
         # Useful to manage sharing rules
         sharingRule:
             all:
@@ -283,7 +282,10 @@ initializeDSView = (callback) ->
                 function (doc) {
                     if(doc.docType && doc.docType.toLowerCase() === "usersharing") {
                         return emit(doc.login, doc)
-=======
+                    }
+                }
+                """
+
         indexdefinition:
             all:
                 map: """
@@ -291,7 +293,6 @@ initializeDSView = (callback) ->
                     if(doc.docType &&
                        doc.docType.toLowerCase() === "indexdefinition") {
                         emit(doc._id, null)
->>>>>>> upstream/master
                     }
                 }
                 """

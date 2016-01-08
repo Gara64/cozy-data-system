@@ -166,7 +166,6 @@ initializeDSView = function(callback) {
         reduce: "function(key, values) {\n    return true;\n}"
       }
     },
-<<<<<<< HEAD
     sharingRule: {
       all: {
         map: "function(doc) {\n    if(doc.docType && doc.docType.toLowerCase() === \"sharingrule\") {\n        return emit(doc._id, doc);\n    }\n}"
@@ -183,11 +182,11 @@ initializeDSView = function(callback) {
       },
       byLogin: {
         map: "function (doc) {\n    if(doc.docType && doc.docType.toLowerCase() === \"usersharing\") {\n        return emit(doc.login, doc)\n    }\n}"
-=======
+      }
+    },
     indexdefinition: {
       all: {
         map: "function(doc) {\n    if(doc.docType &&\n       doc.docType.toLowerCase() === \"indexdefinition\") {\n        emit(doc._id, null)\n    }\n}"
->>>>>>> upstream/master
       }
     }
   };
@@ -255,38 +254,6 @@ module.exports.init = function(callback) {
           });
         });
       }
-<<<<<<< HEAD
-    };
-    return initializeDSView(function() {
-      if (productionOrTest) {
-        return recoverApp((function(_this) {
-          return function(err, apps) {
-            if (err != null) {
-              return callback(err);
-            }
-            return recoverDesignDocs(function(err, docs) {
-              if (err != null) {
-                return callback(err);
-              }
-              return async.forEach(docs, function(doc, cb) {
-                if (doc.views) {
-                  return async.forEach(Object.keys(doc.views), function(view, cb) {
-                    var body;
-                    body = doc.views[view];
-                    return storeAppView(apps, doc, view, body, cb);
-                  }, function(err) {
-                    return removeEmptyView(doc, function(err) {
-                      if (err != null) {
-                        log.error(err);
-                      }
-                      return cb();
-                    });
-                  });
-                } else {
-                  return cb();
-                }
-              }, function(err) {
-=======
     } else {
       return callback();
     }
@@ -302,19 +269,22 @@ module.exports.init = function(callback) {
             return callback(err);
           }
           return async.forEach(docs, function(doc, cb) {
-            return async.forEach(Object.keys(doc.views), function(view, cb) {
-              var body;
-              body = doc.views[view];
-              return storeAppView(apps, doc, view, body, cb);
-            }, function(err) {
-              return removeEmptyView(doc, function(err) {
->>>>>>> upstream/master
-                if (err != null) {
-                  log.error(err);
-                }
-                return cb();
+            if (doc.views) {
+              return async.forEach(Object.keys(doc.views), function(view, cb) {
+                var body;
+                body = doc.views[view];
+                return storeAppView(apps, doc, view, body, cb);
+              }, function(err) {
+                return removeEmptyView(doc, function(err) {
+                  if (err != null) {
+                    log.error(err);
+                  }
+                  return cb();
+                });
               });
-            });
+            } else {
+              return cb();
+            }
           }, function(err) {
             if (err != null) {
               log.error(err);
