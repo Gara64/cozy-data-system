@@ -1,25 +1,21 @@
 {
   "name": "cozy-data-system",
   "description": "Data-layer between cozy applications and persistence systems",
-  "version": "2.0.6",
+  "version": "2.1.6",
   "author": "Cozy Cloud <contact@cozycloud.cc> (http://cozycloud.cc)",
-  "licenses": [
-    {
-      "type": "AGPL v3",
-      "url": "http://www.gnu.org/licenses/agpl-3.0.html"
-    }
-  ],
+  "license": "AGPL-3.0",
   "engines": [
     "*"
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/mycozycloud/cozy-data-system.git"
+    "url": "https://github.com/cozy/cozy-data-system.git"
   },
   "dependencies": {
     "americano": "0.3.7",
     "async": "0.2.10",
     "axon": "0.6.1",
+    "cozy-indexer": "0.0.3",
     "cradle": "0.6.9",
     "git-rev": "0.2.1",
     "gm": "1.17.0",
@@ -38,13 +34,19 @@
     "should": "3.1.2",
     "chai": "1.9.0",
     "mocha": "1.17.1",
+    "coffee-jshint": "0.2.3",
     "coffee-script": "latest",
+    "coffeelint": "1.13.0",
     "coffee-coverage": "0.4.2"
   },
   "main": "server.coffee",
   "scripts": {
     "test": "cake --use-js tests",
-    "start": "node build/server.js"
+    "start": "node build/server.js",
+    "build": "cake build",
+    "lint": "npm run lint1 && npm run lint2",
+    "lint1": "coffeelint -f coffeelint.json ./server/**/*.coffee",
+    "lint2": "coffee-jshint -o node ./server/**/*.coffee"
   },
   "config": {
     "blanket": {

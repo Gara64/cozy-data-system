@@ -109,6 +109,9 @@ module.exports.proxy = (req, res, next) ->
             # Retrieve body
             data = []
             permissions = false
+            # Permissions already checked
+            if req.route.path is '/replication/:id([^_]*)/:name*'
+                permissions = true
             response.on 'data', (chunk) ->
                 if req.method is 'GET'
                     if permissions
@@ -135,7 +138,7 @@ module.exports.proxy = (req, res, next) ->
                 else
                     res.write chunk
 
-            response.on 'end', ()->
+            response.on 'end', ->
                 res.end()
 
         .on 'error', (err) ->
@@ -146,7 +149,7 @@ module.exports.proxy = (req, res, next) ->
     # Receive body from device and transmit it on couchDB
     data = []
     permissions = false
-    req.on 'data', (chunk) =>
+    req.on 'data', (chunk) ->
         if permissions
             stream.emit 'data', chunk
         else
@@ -165,5 +168,9 @@ module.exports.proxy = (req, res, next) ->
                     permissions = true
                     stream.emit 'data', Buffer.concat(data)
 
+<<<<<<< HEAD
     req.on 'end', () =>
+=======
+    req.on 'end', ->
+>>>>>>> upstream/master
         stream.emit 'end'

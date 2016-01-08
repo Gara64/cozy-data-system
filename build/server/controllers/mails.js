@@ -71,10 +71,11 @@ module.exports.send = function(req, res, next) {
     };
     if (body.attachments != null) {
       mailOptions.attachments = body.attachments.map(function(attachment) {
-        var newAttach;
+        var content, newAttach;
+        content = new Buffer(attachment.content.split(",")[1], 'base64');
         return newAttach = {
           filename: attachment.filename,
-          content: new Buffer(attachment.content.split(",")[1], 'base64'),
+          content: content,
           contentType: attachment.contentType
         };
       });
@@ -151,12 +152,13 @@ module.exports.sendFromUser = function(req, res, next) {
           if (domain.indexOf('https://') !== -1) {
             domain = domain.substring(8, domain.length);
           }
+          domain = domain.split(':')[0];
         } else {
           domain = 'your.cozy.io';
         }
         if (((users != null ? (ref1 = users[0]) != null ? ref1.value.public_name : void 0 : void 0) != null) && (users != null ? (ref2 = users[0]) != null ? ref2.value.public_name : void 0 : void 0) !== '') {
           publicName = users[0].value.public_name;
-          displayName = publicName.toLowerCase().replace(' ', '-');
+          displayName = publicName.toLowerCase().replace(/\W/g, '-');
           displayName += "-";
           userEmail = users[0].value.email;
         } else {

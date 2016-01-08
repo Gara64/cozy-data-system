@@ -56,6 +56,9 @@ module.exports.tags = function(req, res, next) {
 };
 
 module.exports.results = function(req, res, next) {
+  var sendRev;
+  sendRev = req.body.show_revs;
+  delete req.body.show_revs;
   return request.get(req.appName, req.params, function(path) {
     return db.view((req.params.type + "/") + path, req.body, function(err, docs) {
       if (err) {
@@ -63,6 +66,7 @@ module.exports.results = function(req, res, next) {
         return next(err);
       } else if (util.isArray(docs)) {
         docs.forEach(function(value) {
+<<<<<<< HEAD
           var error, error1, password;
           delete value._rev;
           if ((value.password != null) && !((value.docType != null) && (value.docType.toLowerCase() === "application" || value.docType.toLowerCase() === "user"))) {
@@ -73,6 +77,17 @@ module.exports.results = function(req, res, next) {
             }
             if (err == null) {
               return value.password = password;
+=======
+          var ref, ref1;
+          if (!sendRev) {
+            delete value._rev;
+          }
+          if ((value.password != null) && !((ref = (ref1 = value.docType) != null ? ref1.toLowerCase() : void 0) === 'application' || ref === 'user')) {
+            try {
+              return value.password = encryption.decrypt(value.password);
+            } catch (_error) {
+              return value._passwordStillEncrypted = true;
+>>>>>>> upstream/master
             }
           }
         });

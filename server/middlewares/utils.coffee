@@ -2,6 +2,7 @@ locker = require '../lib/locker'
 db = require('../helpers/db_connect_helper').db_connect()
 logger = require('printit')(prefix: 'middleware/utils')
 async = require 'async'
+errors = require './errors'
 
 # Helpers
 helpers = require '../helpers/utils'
@@ -54,7 +55,7 @@ module.exports.checkPermissionsByType = (req, res, next) ->
 
 # Check the permission for a post request in replication protocol
 module.exports.checkPermissionsPostReplication = (req, res, next) ->
-    if req.url is '/replication/_revs_diff'
+    if req.url.indexOf('/replication/_revs_diff') is 0
         # Use to retrieve difference in documents revisions
         next()
     else if req.url is '/replication/_ensure_full_commit'
@@ -64,7 +65,7 @@ module.exports.checkPermissionsPostReplication = (req, res, next) ->
 
     else if req.url.indexOf('/replication/_changes') is 0
         next()
-    else if req.url is '/replication/_bulk_docs'
+    else if req.url.indexOf('/replication/_bulk_docs') is 0
         # Use to add/update/delete a document in replication
         async.forEach req.body.docs, (doc, cb) ->
             if doc._deleted

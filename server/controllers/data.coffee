@@ -4,8 +4,12 @@ db = require('../helpers/db_connect_helper').db_connect()
 feed = require '../lib/feed'
 dbHelper = require '../lib/db_remove_helper'
 encryption = require '../lib/encryption'
+<<<<<<< HEAD
 client = require '../lib/indexer'
 sharing = require '../lib/sharing'
+=======
+account = require './accounts'
+>>>>>>> upstream/master
 
 ## Before and after methods
 
@@ -14,8 +18,7 @@ module.exports.encryptPassword = (req, res, next) ->
     try
         password = encryption.encrypt req.body.password
     catch error
-        # do nothing to prevent error in apps
-        # todo add a way to send a warning in the http response
+        return next error
 
     req.body.password = password if password?
     next()
@@ -25,8 +28,8 @@ module.exports.decryptPassword = (req, res, next) ->
     try
         password = encryption.decrypt req.doc.password
     catch error
-        # do nothing to prevent error in apps
-        # todo add a way to send a warning in the http response
+        req.doc._passwordStillEncrypted = true if req.doc.password?
+        account.addApp req.appName
 
     req.doc.password = password if password?
     next()
@@ -145,18 +148,12 @@ module.exports.upsert = (req, res, next) ->
 # DELETE /data/:id/
 # this doesn't take care of conflict (erase DB with the sent value)
 module.exports.delete = (req, res, next) ->
-    id = req.params.id
-    send_success = () ->
-        res.send 204, success: true
-        next()
-
-    dbHelper.remove req.doc, (err, res) ->
+    dbHelper.remove req.doc, (err) ->
         if err
             next err
         else
-            # Doc is removed from indexation
-            client.del "index/#{id}/", (err, response, resbody) ->
-                send_success()
+            res.send 204, success: true
+            next()
 
     if process.env.USE_PLUGDB
         sharing.evalDelete id, (err) ->

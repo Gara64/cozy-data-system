@@ -44,6 +44,8 @@ module.exports.tags = (req, res, next) ->
 
 # POST /request/:type/:req_name/
 module.exports.results = (req, res, next) ->
+    sendRev = req.body.show_revs
+    delete req.body.show_revs
     request.get req.appName, req.params, (path) ->
         db.view "#{req.params.type}/" + path, req.body, (err, docs) ->
             if err
@@ -51,19 +53,18 @@ module.exports.results = (req, res, next) ->
                 next err
             else if util.isArray(docs)
                 docs.forEach (value) ->
-                    delete value._rev # CouchDB specific, user don't need it
-                    if value.password? and not (
-                        (value.docType? and
-                        (value.docType.toLowerCase() is "application" or
-                            value.docType.toLowerCase() is "user")
-                        ))
-                        try
-                            password = encryption.decrypt value.password
-                        catch error
-                            # do nothing to prevt error in apps
-                            # todo add a way to send a warning in the http response
+                    unless sendRev
+                        # Revisions are usefull for devices
+                        delete value._rev # CouchDB specific, user don't need it
 
-                        value.password = password if not err?
+                    if value.password? and
+                    not (value.docType?.toLowerCase() in ['application', 'user'])
+                        try
+                            value.password = encryption.decrypt value.password
+                        catch
+                            # catch error
+                            value._passwordStillEncrypted = true
+
                 res.send docs
             else
                 res.send docs

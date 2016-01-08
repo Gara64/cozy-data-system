@@ -140,19 +140,19 @@ module.exports.remove = (req, res, next) ->
         # Save updated doc
         db.save req.doc, (err) ->
             # Check if binary is used by another document
-            db.view 'binary/byDoc', {key: id}, (err, result) =>
+            db.view 'binary/byDoc', {key: id}, (err, result) ->
                 if result.length isnt 0
                     res.send 204, success: true
                     return next()
 
                 # Then delete binary document.
-                db.get id, (err, binary) =>
+                db.get id, (err, binary) ->
                     unless binary?
                         err = new Error('Binary not found')
                         err.status = 404
                         return next err
 
-                    dbHelper.remove binary, (err) =>
+                    dbHelper.remove binary, (err) ->
                         if err
                             console.log "[Attachment] err: " + \
                                                         JSON.stringify err
@@ -174,7 +174,7 @@ module.exports.convert = (req, res, next) ->
     binaries = {}
     id = req.doc.id
 
-    removeOldAttach = (attach, binaryId, callback) =>
+    removeOldAttach = (attach, binaryId, callback) ->
         db.get req.doc.id, (err, doc) ->
             if err
                 callback err
@@ -189,20 +189,20 @@ module.exports.convert = (req, res, next) ->
                             else
                                 callback null, doc
 
-    createBinary = (attach, callback) =>
+    createBinary = (attach, callback) ->
         # Create binary
         binary =
             docType: "Binary"
-        db.save binary, (err, binDoc) =>
+        db.save binary, (err, binDoc) ->
             # Get attachment
-            readStream = db.getAttachment req.doc.id, attach, (err) =>
+            readStream = db.getAttachment req.doc.id, attach, (err) ->
                 console.log err if err
 
-            attachmentData =
+            data =
                 name: attach
                 body: ''
             # Attach document to binary
-            writeStream  = db.saveAttachment binDoc, attachmentData, (err, res) =>
+            writeStream = db.saveAttachment binDoc, data, (err, res) ->
                 return callback err if err
                 # Remove attachment from documents
                 removeOldAttach attach, binDoc._id, (err, doc) ->
@@ -217,7 +217,8 @@ module.exports.convert = (req, res, next) ->
             readStream.pipe(writeStream)
 
     if req.doc._attachments?
-        async.eachSeries Object.keys(req.doc._attachments), createBinary, (err) ->
+        keys = Object.keys(req.doc._attachments)
+        async.eachSeries keys, createBinary, (err) ->
             if err
                 next err
             else
