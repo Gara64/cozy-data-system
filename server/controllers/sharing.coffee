@@ -80,6 +80,8 @@ module.exports.requestTarget = (req, res, next) ->
                     desc: share.desc
                     sync: share.sync
                     hostUrl: domain
+                    docIDs: share.docIDs
+                    permissions: share.permissions
                 console.log 'request : ' + JSON.stringify request
 
                 # Notify each target
@@ -122,11 +124,13 @@ module.exports.handleAnswer = (req, res, next) ->
 
     # Create an access is the sharing is accepted
     if params.accepted is yes
+
         access =
             login: params.shareID
             password: randomString 32
             id: params.id
-            permissions: params.docIDs
+            permissions: permissions
+            docIDs: docIDs
 
         addAccess access, (err, doc) ->
             return next err if err?

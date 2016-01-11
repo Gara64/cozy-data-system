@@ -85,7 +85,7 @@ requestOptions = (req) ->
             bodyToTransmit = JSON.stringify req.body
             options['body'] = bodyToTransmit
             # Check doc : bodyToTransmit
-            err = checkPermissions req, bodyToTransmit.docType
+            err = checkPermissions req, bodyToTransmit.docType, bodyToTransmit._id
             return [err, options]
     return [null, options]
 
@@ -127,7 +127,7 @@ module.exports.proxy = (req, res, next) ->
                             [err, doc] = retrieveJsonDocument content
                         # Check document docType
                         if doc
-                            err = checkPermissions req, doc.docType
+                            err = checkPermissions req, doc.docType, doc._id
                             if err
                                 # Device isn't authorized
                                 res.send 403, err
@@ -157,7 +157,7 @@ module.exports.proxy = (req, res, next) ->
             [err, doc] = retrieveJsonDocument Buffer.concat(data).toString()
             unless err
                 # Check doc
-                err = checkPermissions req, doc.docType
+                err = checkPermissions req, doc.docType, doc._id
                 if err
                     # Device isn't authorized
                     res.send 403, err

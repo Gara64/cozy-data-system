@@ -26,9 +26,9 @@ module.exports.checkPermissions = (req, permission, next) ->
             next()
 
 
-module.exports.checkPermissionsSync = (req, permission) ->
+module.exports.checkPermissionsSync = (req, permission, id) ->
     authHeader = req.header('authorization')
-    [err, appName, isAuthorized] = checkDocTypeSync authHeader, permission
+    [err, appName, isAuthorized] = checkDocTypeSync authHeader, permission, id
     if not appName
         err = new Error "Application is not authenticated"
         err.status = 401

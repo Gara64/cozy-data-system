@@ -4,6 +4,7 @@ log = require('printit')
     prefix: 'token'
 permissions = {}
 tokens = {}
+docIDs = {}
 
 productionOrTest = process.env.NODE_ENV is "production" or
     process.env.NODE_ENV is "test"
@@ -63,7 +64,7 @@ module.exports.checkDocType = (auth, docType, callback) ->
 ## @name {String} application's name
 ## @callback {function} Continuation to pass control back to when complete.
 ## Check if application can manage docType
-module.exports.checkDocTypeSync = (auth, docType) ->
+module.exports.checkDocTypeSync = (auth, docType, id) ->
     # Check if application is authenticated
 
     if productionOrTest
@@ -72,7 +73,10 @@ module.exports.checkDocTypeSync = (auth, docType) ->
             if docType?
                 docType = docType.toLowerCase()
                 # Check if application can manage docType
-                if permissions[name][docType]?
+                if permissions[name][docType] ?= "Sharing" && id?
+                    console.log 'sharing check : ' + docIDs[name] + ' id : ' + id
+                    callback null, name, id in docIDs[name]
+                else if permissions[name][docType]?
                     return [null, name, true]
                 else if permissions[name]["all"]?
                     return [null, name, true]
@@ -131,6 +135,8 @@ updatePermissions = (access, callback) ->
         if access.permissions?
             for docType, description of access.permissions
                 permissions[login][docType.toLowerCase()] = description
+        if access.docIDs?
+            docIDs[login] = access.docIDs
         callback() if callback?
     else
         callback() if callback?
@@ -152,6 +158,7 @@ addAccess = module.exports.addAccess = (doc, callback) ->
         token: doc.password
         app: doc.id or doc._id
         permissions: doc.permissions
+        docIDs: doc.docIDs
     db.save access, (err, doc) ->
         log.error err if err?
         # Update permissions in RAM
@@ -206,7 +213,6 @@ module.exports.removeAccess = (doc, callback) ->
 ## Initialize tokens and permissions for Home and Proxy
 initHomeProxy = (callback) ->
     token = process.env.TOKEN
-    console.log 'token : ' + token
     token = token.split('\n')[0]
     # Add home token and permissions
     tokens['home'] = token
@@ -259,6 +265,8 @@ initAccess = (access, callback) ->
         for docType, description of access.permissions
             docType = docType.toLowerCase()
             permissions[name][docType] = description
+    if access.docIDs?
+        docIDs[name] = docIDs
     callback null
 
 ## function init (callback)
