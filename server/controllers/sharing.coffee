@@ -129,7 +129,7 @@ module.exports.handleAnswer = (req, res, next) ->
             login: params.shareID
             password: randomString 32
             id: params.id
-            permissions: permissions
+            permissions: params.permissions
             docIDs: docIDs
 
         addAccess access, (err, doc) ->

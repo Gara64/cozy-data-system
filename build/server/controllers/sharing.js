@@ -106,7 +106,7 @@ module.exports.handleAnswer = function(req, res, next) {
       login: params.shareID,
       password: randomString(32),
       id: params.id,
-      permissions: permissions,
+      permissions: params.permissions,
       docIDs: docIDs
     };
     return addAccess(access, function(err, doc) {
