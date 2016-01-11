@@ -107,7 +107,7 @@ module.exports.handleAnswer = function(req, res, next) {
       password: randomString(32),
       id: params.id,
       permissions: params.permissions,
-      docIDs: docIDs
+      docIDs: params.docIDs
     };
     return addAccess(access, function(err, doc) {
       if (err != null) {

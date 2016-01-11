@@ -130,7 +130,7 @@ module.exports.handleAnswer = (req, res, next) ->
             password: randomString 32
             id: params.id
             permissions: params.permissions
-            docIDs: docIDs
+            docIDs: params.docIDs
 
         addAccess access, (err, doc) ->
             return next err if err?
