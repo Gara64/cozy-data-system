@@ -41,10 +41,10 @@ module.exports.checkPermissions = function(req, permission, next) {
   });
 };
 
-module.exports.checkPermissionsSync = function(req, permission) {
+module.exports.checkPermissionsSync = function(req, permission, id) {
   var appName, authHeader, err, isAuthorized, ref;
   authHeader = req.header('authorization');
-  ref = checkDocTypeSync(authHeader, permission), err = ref[0], appName = ref[1], isAuthorized = ref[2];
+  ref = checkDocTypeSync(authHeader, permission, id), err = ref[0], appName = ref[1], isAuthorized = ref[2];
   if (!appName) {
     err = new Error("Application is not authenticated");
     err.status = 401;

@@ -55,7 +55,9 @@ module.exports.requestTarget = function(req, res, next) {
           shareID: share.id,
           desc: share.desc,
           sync: share.sync,
-          hostUrl: domain
+          hostUrl: domain,
+          docIDs: share.docIDs,
+          permissions: share.permissions
         };
         console.log('request : ' + JSON.stringify(request));
         return async.each(share.targets, function(target, callback) {
@@ -104,7 +106,8 @@ module.exports.handleAnswer = function(req, res, next) {
       login: params.shareID,
       password: randomString(32),
       id: params.id,
-      permissions: params.docIDs
+      permissions: permissions,
+      docIDs: docIDs
     };
     return addAccess(access, function(err, doc) {
       if (err != null) {
