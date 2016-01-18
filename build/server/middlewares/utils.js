@@ -49,20 +49,20 @@ module.exports.getDoc = function(req, res, next) {
 
 module.exports.checkPermissionsFactory = function(permission) {
   return function(req, res, next) {
-    return checkPermissions(req, permission, next);
+    return checkPermissions(req, permission, null, next);
   };
 };
 
 module.exports.checkPermissionsByDoc = function(req, res, next) {
-  return checkPermissions(req, req.doc.docType, next);
+  return checkPermissions(req, req.doc.docType, req.doc._id, next);
 };
 
 module.exports.checkPermissionsByBody = function(req, res, next) {
-  return checkPermissions(req, req.body.docType, next);
+  return checkPermissions(req, req.body.docType, req.body._id, next);
 };
 
 module.exports.checkPermissionsByType = function(req, res, next) {
-  return checkPermissions(req, req.params.type, next);
+  return checkPermissions(req, req.params.type, null, next);
 };
 
 module.exports.checkPermissionsPostReplication = function(req, res, next) {
@@ -77,10 +77,10 @@ module.exports.checkPermissionsPostReplication = function(req, res, next) {
     return async.forEach(req.body.docs, function(doc, cb) {
       if (doc._deleted) {
         return db.get(doc._id, function(err, doc) {
-          return checkPermissions(req, doc.docType, cb);
+          return checkPermissions(req, doc.docType, doc._id, cb);
         });
       } else {
-        return checkPermissions(req, doc.docType, cb);
+        return checkPermissions(req, doc.docType, doc._id, cb);
       }
     }, next);
   } else {

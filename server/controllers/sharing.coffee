@@ -11,6 +11,24 @@ randomString = (length) ->
         string = string + Math.random().toString(36).substr(2)
     return string.substr 0, length
 
+# Check the sharing permissions are correclty formed
+checkSharingPermissions = (permissions, callback) ->
+    async.forEachOf permissions, (value, key, cb) ->
+        console.log 'value : ' + JSON.stringify value
+        console.log 'key : ' + JSON.stringify key
+        cb()
+        ###
+        if description is not "Sharing"
+            err = new Error "Permissions badly defined"
+            err.status = 400
+            cb err
+        ###
+    , (err) ->
+        callback err
+
+            
+
+
 # --- Creation of the share document.
 # The share document is a document that represents the sharing process that was
 # initiated and that we store in the database for further use.
@@ -124,20 +142,23 @@ module.exports.handleAnswer = (req, res, next) ->
 
     # Create an access is the sharing is accepted
     if params.accepted is yes
+        # Check the permissions are well formed
+        checkSharingPermissions params.permissions, (err) ->
+            return next err if err? 
 
-        access =
-            login: params.shareID
-            password: randomString 32
-            id: params.id
-            permissions: params.permissions
-            docIDs: params.docIDs
+            access =
+                login: params.shareID
+                password: randomString 32
+                id: params.id
+                permissions: params.permissions
+                docIDs: params.docIDs
 
-        addAccess access, (err, doc) ->
-            return next err if err?
-            
-            params.pwd = access.password
-            req.params = params
-            next()           
+            addAccess access, (err, doc) ->
+                return next err if err?
+                
+                params.pwd = access.password
+                req.params = params
+                next()           
 
     # Delete the associated doc if the sharing is refused
     else

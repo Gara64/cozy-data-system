@@ -9,9 +9,9 @@ module.exports.deleteFiles = (files) ->
         fs.unlinkSync file.path for key, file of files
 
 # Check the application has the permissions to access the route
-module.exports.checkPermissions = (req, permission, next) ->
+module.exports.checkPermissions = (req, permission, id, next) ->
     authHeader = req.header('authorization')
-    checkDocType authHeader, permission, (err, appName, isAuthorized) ->
+    checkDocType authHeader, permission, id, (err, appName, isAuthorized) ->
         if not appName
             err = new Error "Application is not authenticated"
             err.status = 401

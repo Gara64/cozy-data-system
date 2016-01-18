@@ -21,10 +21,10 @@ module.exports.deleteFiles = function(files) {
   }
 };
 
-module.exports.checkPermissions = function(req, permission, next) {
+module.exports.checkPermissions = function(req, permission, id, next) {
   var authHeader;
   authHeader = req.header('authorization');
-  return checkDocType(authHeader, permission, function(err, appName, isAuthorized) {
+  return checkDocType(authHeader, permission, id, function(err, appName, isAuthorized) {
     if (!appName) {
       err = new Error("Application is not authenticated");
       err.status = 401;

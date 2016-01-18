@@ -35,7 +35,7 @@ checkToken = (auth) ->
 ## @name {String} application's name
 ## @callback {function} Continuation to pass control back to when complete.
 ## Check if application can manage docType
-module.exports.checkDocType = (auth, docType, callback) ->
+module.exports.checkDocType = (auth, docType, id, callback) ->
     # Check if application is authenticated
 
     if productionOrTest
@@ -45,6 +45,8 @@ module.exports.checkDocType = (auth, docType, callback) ->
                 docType = docType.toLowerCase()
                 # Check if application can manage docType
                 # Particular case for sharing access control
+                console.log 'name : ' + name + ' - id : ' + id
+                console.log 'docType : ' + docType
                 if permissions[name][docType] ?= "Sharing" && id?
                     console.log 'sharing check : ' + docIDs[name] + ' id : ' + id
                     callback null, name, id in docIDs[name]
