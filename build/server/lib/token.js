@@ -36,15 +36,13 @@ checkToken = function(auth) {
 };
 
 module.exports.checkDocType = function(auth, docType, id, callback) {
-  var base, err, isAuthenticated, name, ref, ref1;
+  var err, isAuthenticated, name, ref, ref1;
   if (productionOrTest) {
     ref = checkToken(auth), err = ref[0], isAuthenticated = ref[1], name = ref[2];
     if (isAuthenticated) {
       if (docType != null) {
         docType = docType.toLowerCase();
-        console.log('name : ' + name + ' - id : ' + id);
-        console.log('docType : ' + docType);
-        if ((base = permissions[name])[docType] != null ? base[docType] : base[docType] = "Sharing" && (id != null)) {
+        if ((permissions[name][docType] === "Sharing") && (id != null)) {
           console.log('sharing check : ' + docIDs[name] + ' id : ' + id);
           return callback(null, name, indexOf.call(docIDs[name], id) >= 0);
         } else if (permissions[name][docType] != null) {
@@ -70,13 +68,13 @@ module.exports.checkDocType = function(auth, docType, id, callback) {
 };
 
 module.exports.checkDocTypeSync = function(auth, docType, id) {
-  var base, err, isAuthenticated, name, ref, ref1;
+  var err, isAuthenticated, name, ref, ref1;
   if (productionOrTest) {
     ref = checkToken(auth), err = ref[0], isAuthenticated = ref[1], name = ref[2];
     if (isAuthenticated) {
       if (docType != null) {
         docType = docType.toLowerCase();
-        if ((base = permissions[name])[docType] != null ? base[docType] : base[docType] = "Sharing" && (id != null)) {
+        if ((permissions[name][docType] === "Sharing") && (id != null)) {
           return callback(null, name, indexOf.call(docIDs[name], id) >= 0);
         } else if (permissions[name][docType] != null) {
           return [null, name, true];

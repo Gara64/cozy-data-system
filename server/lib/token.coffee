@@ -43,13 +43,11 @@ module.exports.checkDocType = (auth, docType, id, callback) ->
         if isAuthenticated
             if docType?
                 docType = docType.toLowerCase()
-                # Check if application can manage docType
                 # Particular case for sharing access control
-                console.log 'name : ' + name + ' - id : ' + id
-                console.log 'docType : ' + docType
-                if permissions[name][docType] ?= "Sharing" && id?
+                if (permissions[name][docType] is "Sharing") && (id?)
                     console.log 'sharing check : ' + docIDs[name] + ' id : ' + id
                     callback null, name, id in docIDs[name]
+                # Check if application can manage docType
                 else if permissions[name][docType]?
                     callback null, name, true
                 else if permissions[name]["all"]?
@@ -78,9 +76,10 @@ module.exports.checkDocTypeSync = (auth, docType, id) ->
         if isAuthenticated
             if docType?
                 docType = docType.toLowerCase()
-                # Check if application can manage docType
-                if permissions[name][docType] ?= "Sharing" && id?
+                # Particular case for sharing access control
+                if (permissions[name][docType] is "Sharing") && (id?)
                     callback null, name, id in docIDs[name]
+                # Check if application can manage docType
                 else if permissions[name][docType]?
                     return [null, name, true]
                 else if permissions[name]["all"]?
