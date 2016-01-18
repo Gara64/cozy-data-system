@@ -43,13 +43,14 @@ module.exports.checkDocType = (auth, docType, id, callback) ->
         if isAuthenticated
             if docType?
                 docType = docType.toLowerCase()
-                # Particular case for sharing access control
-                if (permissions[name][docType] is "Sharing") && (id?)
-                    console.log 'sharing check : ' + docIDs[name] + ' id : ' + id
-                    callback null, name, id in docIDs[name]
                 # Check if application can manage docType
-                else if permissions[name][docType]?
-                    callback null, name, true
+                if permissions[name][docType]?
+                    # Particular case for sharing access control
+                    if permissions[name][docType].sharing is true
+                        console.log 'sharing check : ' + docIDs[name] + ' id : ' + id
+                        callback null, name, id in docIDs[name]
+                    else
+                        callback null, name, true
                 else if permissions[name]["all"]?
                     callback null, name, true
                 else
@@ -76,12 +77,14 @@ module.exports.checkDocTypeSync = (auth, docType, id) ->
         if isAuthenticated
             if docType?
                 docType = docType.toLowerCase()
-                # Particular case for sharing access control
-                if (permissions[name][docType] is "Sharing") && (id?)
-                    callback null, name, id in docIDs[name]
                 # Check if application can manage docType
-                else if permissions[name][docType]?
-                    return [null, name, true]
+                if permissions[name][docType]?
+                    # Particular case for sharing access control
+                    if permissions[name][docType].sharing is true
+                        console.log 'sharing check : ' + docIDs[name] + ' id : ' + id
+                        callback null, name, id in docIDs[name]
+                    else
+                        callback null, name, true
                 else if permissions[name]["all"]?
                     return [null, name, true]
                 else

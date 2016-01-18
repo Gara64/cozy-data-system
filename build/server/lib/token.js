@@ -42,11 +42,13 @@ module.exports.checkDocType = function(auth, docType, id, callback) {
     if (isAuthenticated) {
       if (docType != null) {
         docType = docType.toLowerCase();
-        if ((permissions[name][docType] === "Sharing") && (id != null)) {
-          console.log('sharing check : ' + docIDs[name] + ' id : ' + id);
-          return callback(null, name, indexOf.call(docIDs[name], id) >= 0);
-        } else if (permissions[name][docType] != null) {
-          return callback(null, name, true);
+        if (permissions[name][docType] != null) {
+          if (permissions[name][docType].sharing === true) {
+            console.log('sharing check : ' + docIDs[name] + ' id : ' + id);
+            return callback(null, name, indexOf.call(docIDs[name], id) >= 0);
+          } else {
+            return callback(null, name, true);
+          }
         } else if (permissions[name]["all"] != null) {
           return callback(null, name, true);
         } else {
@@ -74,10 +76,13 @@ module.exports.checkDocTypeSync = function(auth, docType, id) {
     if (isAuthenticated) {
       if (docType != null) {
         docType = docType.toLowerCase();
-        if ((permissions[name][docType] === "Sharing") && (id != null)) {
-          return callback(null, name, indexOf.call(docIDs[name], id) >= 0);
-        } else if (permissions[name][docType] != null) {
-          return [null, name, true];
+        if (permissions[name][docType] != null) {
+          if (permissions[name][docType].sharing === true) {
+            console.log('sharing check : ' + docIDs[name] + ' id : ' + id);
+            return callback(null, name, indexOf.call(docIDs[name], id) >= 0);
+          } else {
+            return callback(null, name, true);
+          }
         } else if (permissions[name]["all"] != null) {
           return [null, name, true];
         } else {
