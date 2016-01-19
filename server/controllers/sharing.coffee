@@ -13,10 +13,8 @@ randomString = (length) ->
 
 # Check the sharing permissions are correclty formed
 checkSharingPermissions = (permissions, callback) ->
-    async.forEachOf permissions, (item, key, cb) ->
-        console.log 'value : ' + JSON.stringify value
-        console.log 'key : ' + JSON.stringify key
-        if permissions[key]["sharing"] is true
+    async.forEachOf permissions, (item, docType, cb) ->
+        if permissions[docType]["sharing"] is true
             cb()
         else 
             err = new Error "Permissions badly defined"

@@ -19,11 +19,9 @@ randomString = function(length) {
 };
 
 checkSharingPermissions = function(permissions, callback) {
-  return async.forEachOf(permissions, function(item, key, cb) {
+  return async.forEachOf(permissions, function(item, docType, cb) {
     var err;
-    console.log('value : ' + JSON.stringify(value));
-    console.log('key : ' + JSON.stringify(key));
-    if (permissions[key]["sharing"] === true) {
+    if (permissions[docType]["sharing"] === true) {
       return cb();
     } else {
       err = new Error("Permissions badly defined");

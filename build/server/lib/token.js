@@ -288,7 +288,7 @@ initAccess = function(access, callback) {
     }
   }
   if (access.docIDs != null) {
-    docIDs[name] = docIDs;
+    docIDs[name] = access.docIDs;
   }
   return callback(null);
 };

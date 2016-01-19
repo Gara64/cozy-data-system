@@ -273,7 +273,7 @@ initAccess = (access, callback) ->
             docType = docType.toLowerCase()
             permissions[name][docType] = description
     if access.docIDs?
-        docIDs[name] = docIDs
+        docIDs[name] = access.docIDs
     callback null
 
 ## function init (callback)
