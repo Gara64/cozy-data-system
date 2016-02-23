@@ -4,7 +4,7 @@ log = require('printit')
     prefix: 'token'
 permissions = {}
 tokens = {}
-docIDs = {}
+sharing = {}
 
 productionOrTest = process.env.NODE_ENV in ['production', 'test']
 
@@ -56,6 +56,45 @@ module.exports.checkDocType = (auth, docType, id, callback) ->
         [err, isAuthenticated, name] = checkToken auth
         name ?= 'unknown'
         callback null, name, true
+
+
+## XXX WIP - checkDocIds: check if an application can manage the documents
+# which ids are provided.
+#
+## @auth {???} the application means of authentication
+## @docIds Array<String> the ids of the documents the application wants to
+#                        access
+## @callback {function} continuation
+module.exports.checkDocIds = (auth, docIds, callback) ->
+
+    if productionOrTest
+        # Check if app is authenticated
+        [err, isAuthenticated, name] = checkToken auth
+
+        if isAuthenticated
+            if docIds?
+                # for each id check if the permission exists for that
+                # particular app: if one id is missing then the app does not
+                # have the necessary rights
+                for id in docIds
+                    if not id in sharing[name]
+                        callback null, name, false
+
+                # All documents can be accessed by the app: let's go
+                callback null, name, true
+
+            else
+                # no document id? no way in!
+                callback null, name, false
+        else
+            # app is not authenticated: no way in!
+            callback null, false, false
+
+    else
+        [err, isAuthenticated, name] = checkToken auth
+        name ?= 'unknow sharing'
+        callback null, name, true
+
 
 ## function checkDocType (docType, app, callback)
 ## @docType {String} document's docType that application want manage
