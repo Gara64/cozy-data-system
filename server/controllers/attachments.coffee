@@ -1,4 +1,3 @@
-fs = require "fs"
 querystring = require "querystring"
 multiparty = require 'multiparty'
 log =  require('printit')
@@ -6,7 +5,6 @@ log =  require('printit')
     prefix: 'attachment'
 
 db = require('../helpers/db_connect_helper').db_connect()
-deleteFiles = require('../helpers/utils').deleteFiles
 downloader = require '../lib/downloader'
 
 
@@ -61,7 +59,7 @@ module.exports.add = (req, res, next) ->
                     # We end the request because we expect to have only one
                     # file.
                     log.info "Attachment #{name} saved to Couch."
-                    res.send 201, success: true
+                    res.status(201).send success: true
                     next()
 
             part.pipe stream
@@ -118,5 +116,5 @@ module.exports.remove = (req, res, next) ->
         if err
             next err
         else
-            res.send 204, success: true
+            res.status(204).send success: true
             next()

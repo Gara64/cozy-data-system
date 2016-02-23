@@ -5,15 +5,7 @@ log = require('printit')
     date: true
     prefix: 'lib/request'
 
-# Define random function for application's token
-randomString = (length) ->
-    string = ""
-    while (string.length < length)
-        string = string + Math.random().toString(36).substr(2)
-    return string.substr 0, length
-
-productionOrTest = process.env.NODE_ENV is "production" or
-    process.env.NODE_ENV is "test"
+productionOrTest = process.env.NODE_ENV in ['production', 'test']
 
 ## function create (app, req, views, newView, callback)
 ## @app {String} application name
@@ -317,7 +309,7 @@ initializeDSView = (callback) ->
 ## Initialize request
 module.exports.init = (callback) ->
     removeEmptyView = (doc, callback) ->
-        if Object.keys(doc.views).length is 0 or not doc?.views?
+        if not doc?.views? or Object.keys(doc.views).length is 0
             db.remove doc._id, doc._rev, (err, response) ->
                 if err
                     log.error "[Definition] err: " + err.message
@@ -363,7 +355,11 @@ module.exports.init = (callback) ->
                 recoverDesignDocs (err, docs) ->
                     return callback err if err?
                     async.forEach docs, (doc, cb) ->
-                        if doc.views
+                        if not doc?.views?
+                            log.warn "Document has no view"
+                            log.warn doc
+                            cb()
+                        else
                             async.forEach Object.keys(doc.views), (view, cb) ->
                                 body = doc.views[view]
                                 storeAppView apps, doc, view, body, cb
@@ -371,8 +367,6 @@ module.exports.init = (callback) ->
                                 removeEmptyView doc, (err) ->
                                     log.error err if err?
                                     cb()
-                        else
-                            cb()
                     , (err) ->
                         log.error err if err?
                         callback()
