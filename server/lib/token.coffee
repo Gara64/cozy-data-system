@@ -4,9 +4,14 @@ log = require('printit')
     prefix: 'token'
 permissions = {}
 tokens = {}
+# Array of objects containing the rules describing which files can be accessed
+# by which application.
+# A rule is: {id: 'someId', docType: 'someDocType'}
+# For a given app its set of rules can be retrieved via: sharing[app]
 sharing = {}
 
 productionOrTest = process.env.NODE_ENV in ['production', 'test']
+
 
 ## function checkToken (auth, tokens, callback)
 ## @auth {string} Field 'authorization' of request
@@ -28,12 +33,13 @@ checkToken = module.exports.checkToken = (auth) ->
     else
         return [null, false, null]
 
+
 ## function checkDocType (docType, app, callback)
 ## @docType {String} document's docType that application want manage
 ## @name {String} application's name
 ## @callback {function} Continuation to pass control back to when complete.
 ## Check if application can manage docType
-module.exports.checkDocType = (auth, docType, id, callback) ->
+module.exports.checkDocType = (auth, docType, callback) ->
     # Check if application is authenticated
 
     if productionOrTest
@@ -58,33 +64,46 @@ module.exports.checkDocType = (auth, docType, id, callback) ->
         callback null, name, true
 
 
-## XXX WIP - checkDocIds: check if an application can manage the documents
-# which ids are provided.
+# Utility function to check if a rule is inside a set of rules.
+# A rule has the following structure:
+# rule = {id: 'someId', docType: 'someDocType'}
+isRuleIn = (set_rules, rule) ->
+    # check if `set_rules` is an array
+    if set_rules.length?
+        for _rule in set_rules
+            if rule.id is _rule.id
+                if rule.docType is _rule.docType
+                    return true
+
+        return false
+    else
+        # `set_rules` is a single element
+        return set_rules.id is rule.id and set_rules.docType is rule.docType
+
+# XXX WIP - to double-check
 #
-## @auth {???} the application means of authentication
-## @docIds Array<String> the ids of the documents the application wants to
-#                        access
+## function checkDocRule (auth, rule, callback)
+## @auth {Object} the application means of authentication
+## @rule {Object} the rule matching a unique document
 ## @callback {function} continuation
-module.exports.checkDocIds = (auth, docIds, callback) ->
+## Check if an application can manage the document matching the rule
+module.exports.checkDocRule = (auth, rule, callback) ->
 
     if productionOrTest
         # Check if app is authenticated
         [err, isAuthenticated, name] = checkToken auth
 
         if isAuthenticated
-            if docIds?
-                # for each id check if the permission exists for that
-                # particular app: if one id is missing then the app does not
-                # have the necessary rights
-                for id in docIds
-                    if not id in sharing[name]
-                        callback null, name, false
-
-                # All documents can be accessed by the app: let's go
-                callback null, name, true
+            if rule?
+                if isRuleIn sharing[name], rule
+                    # rule is in: okay!
+                    callback null, name, true
+                else
+                    # rule is missing: no way in!
+                    callback null, name, false
 
             else
-                # no document id? no way in!
+                # no rule? no way in!
                 callback null, name, false
         else
             # app is not authenticated: no way in!
@@ -101,7 +120,7 @@ module.exports.checkDocIds = (auth, docIds, callback) ->
 ## @name {String} application's name
 ## @callback {function} Continuation to pass control back to when complete.
 ## Check if application can manage docType
-module.exports.checkDocTypeSync = (auth, docType, id) ->
+module.exports.checkDocTypeSync = (auth, docType, callback) ->
     # Check if application is authenticated
 
     if productionOrTest
@@ -153,71 +172,103 @@ module.exports.checkProxyHome = (auth, callback) ->
         callback null, true
 
 
-## function updatePermissons (body, callback)
-## @body {Object} application:
-##   * body.password is application token
-##   * body.name is application name
-##   * body.permissions is application permissions
+# XXX WIP - to double-check
+## function updatePermissons (access, callback)
+## @access {Object} application:
+##   * access.password is application token
+##   * access.name is application name
+##   * access.permissions is application permissions
+##   * access.sharing is a set of {id: 'docId', docType: 'docType'} rules for
+##     accessing documents.
 ## @callback {function} Continuation to pass control back to when complete.
 ## Update application permissions and token
 updatePermissions = (access, callback) ->
     login = access.login
+
     if productionOrTest
         if access.token?
             tokens[login] = access.token
-        permissions[login] = {}
+
         if access.permissions?
+            permissions[login] = {}
             for docType, description of access.permissions
                 permissions[login][docType.toLowerCase()] = description
-        if access.docIDs?
-            docIDs[login] = access.docIDs
+
+        if access.sharing?
+            sharing[login] = access.sharing
+
         callback() if callback?
+
     else
         callback() if callback?
 
 
+# XXX WIP - to double-check
 ## function addAccess (doc, callback)
 ## @doc {Object} application/device:
 ##   * doc.password is application token
 ##   * doc.slug/doc.login is application name
 ##   * doc.permissions is application permissions
 ##   * doc.id/doc._id is application id
+##   * doc.sharing is a set of {'docId', 'docType'} rules for accessing
+##     documents.
 ## @callback {function} Continuation to pass control back to when complete.
 ## Add access for application or device
 addAccess = module.exports.addAccess = (doc, callback) ->
+
     # Create access
     access =
         docType: "Access"
         login: doc.slug or doc.login
         token: doc.password
         app: doc.id or doc._id
-        permissions: doc.permissions
-        docIDs: doc.docIDs
+
+    # Safeguard: if we create an access that has sharing capabilities then its
+    # permissions must be empty so that it can only access documents based on
+    # the sharing "rules"
+    if doc.sharing?
+        access.sharing = doc.sharing
+    else
+        access.permissions = doc.permissions
+
     db.save access, (err, doc) ->
         log.error err if err?
         # Update permissions in RAM
         updatePermissions access, ->
             callback null, access if callback?
 
+
+# XXX WIP - to double-check
 ## function updateAccess (doc, callback)
 ## @id {String} access id for application
 ## @doc {Object} application/device:
 ##   * doc.password is new application token
 ##   * doc.slug/doc.login is new application name
 ##   * doc.permissions is new application permissions
+##   * doc.sharing is new set of sharing rules
 ## @callback {function} Continuation to pass control back to when complete.
 ## Update access for application or device
 module.exports.updateAccess = (id, doc, callback) ->
     db.view 'access/byApp', key:id, (err, accesses) ->
         if accesses.length > 0
             access = accesses[0].value
+
             # Delete old access
+            # XXX What happens if permissions[access.login] or
+            # sharing[access.login] does not exist? Because if one does then
+            # the other doesn't.
             delete permissions[access.login]
             delete tokens[access.login]
+            delete sharing[access.login]
+
             # Create new access
             access.login = doc.slug or access.login
             access.token = doc.password or access.token
-            access.permissions = doc.permissions or access.permissions
+            if doc.sharing?
+                access.sharing = doc.sharing
+            else
+                access.permissions = doc.permissions or access.permissions
+
             db.save access._id, access, (err, body) ->
                 log.error err if err?
                 # Update permissions in RAM
@@ -226,6 +277,8 @@ module.exports.updateAccess = (id, doc, callback) ->
         else
             addAccess doc, callback
 
+
+# XXX WIP - to double-check
 ## function removeAccess (doc, callback)
 ## @doc {Object} access to remove
 ## @callback {function} Continuation to pass control back to when complete.
@@ -235,8 +288,11 @@ module.exports.removeAccess = (doc, callback) ->
         return callback err if err? and callback?
         if accesses.length > 0
             access = accesses[0].value
+            # XXX Same as the above function: what happens when we try to
+            # delete something that does not exist?
             delete permissions[access.login]
             delete tokens[access.login]
+            delete sharing[access.login]
             db.remove access._id, access._rev, (err) ->
                 callback err if callback?
         else
@@ -272,7 +328,7 @@ initHomeProxy = (callback) ->
         "stackapplication": "authorized"
         "send mail to user": "authorized"
         "send mail from user": "authorized"
-        "usersharing": "authorized"
+        "sharing": "authorized"
     # Add proxy token and permissions
     tokens['proxy'] = token
     permissions.proxy =
@@ -283,7 +339,7 @@ initHomeProxy = (callback) ->
         "device": "authorized"
         "usetracker": "authorized"
         "send mail to user": "authorized"
-        "usersharing": "authorized"
+        "sharing": "authorized"
     callback null
 
 
@@ -299,8 +355,8 @@ initAccess = (access, callback) ->
         for docType, description of access.permissions
             docType = docType.toLowerCase()
             permissions[name][docType] = description
-    if access.docIDs?
-        docIDs[name] = access.docIDs
+    if access.sharing?
+        sharing[name] = access.sharing
     callback null
 
 ## function init (callback)
