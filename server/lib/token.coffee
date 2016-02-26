@@ -178,7 +178,7 @@ module.exports.checkProxyHome = (auth, callback) ->
 ##   * access.password is application token
 ##   * access.name is application name
 ##   * access.permissions is application permissions
-##   * access.sharing is a set of {id: 'docId', docType: 'docType'} rules for
+##   * access.rules is a set of {id: 'docId', docType: 'docType'} rules for
 ##     accessing documents.
 ## @callback {function} Continuation to pass control back to when complete.
 ## Update application permissions and token
@@ -194,8 +194,8 @@ updatePermissions = (access, callback) ->
             for docType, description of access.permissions
                 permissions[login][docType.toLowerCase()] = description
 
-        if access.sharing?
-            sharing[login] = access.sharing
+        if access.rules?
+            sharing[login] = access.rules
 
         callback() if callback?
 
@@ -210,7 +210,7 @@ updatePermissions = (access, callback) ->
 ##   * doc.slug/doc.login is application name
 ##   * doc.permissions is application permissions
 ##   * doc.id/doc._id is application id
-##   * doc.sharing is a set of {'docId', 'docType'} rules for accessing
+##   * doc.rules is a set of {'docId', 'docType'} rules for accessing
 ##     documents.
 ## @callback {function} Continuation to pass control back to when complete.
 ## Add access for application or device
@@ -226,8 +226,8 @@ addAccess = module.exports.addAccess = (doc, callback) ->
     # Safeguard: if we create an access that has sharing capabilities then its
     # permissions must be empty so that it can only access documents based on
     # the sharing "rules"
-    if doc.sharing?
-        access.sharing = doc.sharing
+    if doc.rules?
+        access.rules = doc.rules
     else
         access.permissions = doc.permissions
 
@@ -245,7 +245,7 @@ addAccess = module.exports.addAccess = (doc, callback) ->
 ##   * doc.password is new application token
 ##   * doc.slug/doc.login is new application name
 ##   * doc.permissions is new application permissions
-##   * doc.sharing is new set of sharing rules
+##   * doc.rules is new set of sharing rules
 ## @callback {function} Continuation to pass control back to when complete.
 ## Update access for application or device
 module.exports.updateAccess = (id, doc, callback) ->
@@ -264,8 +264,8 @@ module.exports.updateAccess = (id, doc, callback) ->
             # Create new access
             access.login = doc.slug or access.login
             access.token = doc.password or access.token
-            if doc.sharing?
-                access.sharing = doc.sharing
+            if doc.rules?
+                access.rules = doc.rules
             else
                 access.permissions = doc.permissions or access.permissions
 
@@ -355,8 +355,8 @@ initAccess = (access, callback) ->
         for docType, description of access.permissions
             docType = docType.toLowerCase()
             permissions[name][docType] = description
-    if access.sharing?
-        sharing[name] = access.sharing
+    if access.rules?
+        sharing[name] = access.rules
     callback null
 
 ## function init (callback)
