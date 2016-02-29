@@ -1,4 +1,3 @@
-feed = require '../lib/feed'
 indexer = require '../lib/indexer'
 log = require('printit')
     prefix: 'indexcontroller'
@@ -12,7 +11,7 @@ db = require('../helpers/db_connect_helper').db_connect()
 module.exports.index = (req, res, next) ->
     log.info 'app used deprecated POST /data/index/:id'
     indexer.waitIndexing req.params.id, (err) ->
-        res.send 200, success: true
+        res.status(200).send success: true
 
 # POST /data/index/define/:type
 # Register parameters on how to index given docType
@@ -20,12 +19,12 @@ module.exports.defineIndex = (req, res, next) ->
     docType = req.params.type.toLowerCase()
     indexer.registerIndexDefinition docType, req.body, (err) ->
         return next err if err
-        res.send 200, success: true
+        res.status(200).send success: true
 
 module.exports.indexingStatus = (req, res, next) ->
     indexer.status (err, status) ->
         return next err if err
-        res.send 200, status
+        res.status(200).send status
 
 # POST /data/search/
 # POST /data/search/:type
@@ -51,7 +50,7 @@ module.exports.search = (req, res, next) ->
 # Remove index for given document
 module.exports.remove = (req, res, next) ->
     log.info 'app used deprecated DELETE /data/index/:id'
-    setTimeout (-> res.send 200, success: true), 100
+    setTimeout (-> res.status(200).send success: true), 100
 
 
 # DELETE /data/index/clear-all/
@@ -59,4 +58,4 @@ module.exports.remove = (req, res, next) ->
 module.exports.removeAll = (req, res, next) ->
     indexer.cleanup (err) ->
         return next err if err
-        res.send 200, success: true
+        res.status(200).send success: true

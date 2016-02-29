@@ -1,5 +1,3 @@
-async = require "async"
-
 db = require('../helpers/db_connect_helper').db_connect()
 request = require '../lib/request'
 encryption = require '../lib/encryption'
@@ -25,7 +23,7 @@ module.exports.doctypes = (req, res, next) ->
             next err
         else
             docs.forEach (key, row, id) -> out.push key
-            res.send 200, out
+            res.status(200).send out
 
 # GET /tags
 # list all tags
@@ -40,7 +38,7 @@ module.exports.tags = (req, res, next) ->
             next err
         else
             docs.forEach (key, row, id) -> out.push key
-            res.send 200, out
+            res.status(200).send out
 
 # POST /request/:type/:req_name/
 module.exports.results = (req, res, next) ->
@@ -57,8 +55,9 @@ module.exports.results = (req, res, next) ->
                         # Revisions are usefull for devices
                         delete value._rev # CouchDB specific, user don't need it
 
-                    if value.password? and
-                    not (value.docType?.toLowerCase() in ['application', 'user'])
+                    if value.password? and value.docType?.toLowerCase() not in [
+                        'application', 'user'
+                    ]
                         try
                             value.password = encryption.decrypt value.password
                         catch
@@ -88,7 +87,7 @@ module.exports.removeResults = (req, res, next) ->
                     # an error. But that's what we are seeking for: removing
                     # all docs. That's why we ignore the error.
                     if options.startkey?
-                        res.send 204, success: true
+                        res.status(204).send success: true
                     else
                         next err
             else
@@ -98,7 +97,7 @@ module.exports.removeResults = (req, res, next) ->
                     dbHelper.removeAll docs, ->
                         setTimeout delFunc, 500
                 else
-                    res.send 204, success: true
+                    res.status(204).send success: true
 
     request.get req.appName, req.params, (path) ->
         viewName = "#{req.params.type}/#{path}"
@@ -117,7 +116,7 @@ module.exports.definition = (req, res, next) ->
                     console.log "[Definition] err: " + JSON.stringify err
                     next err
                 else
-                    res.send 200, success: true
+                    res.status(200).send success: true
                     next()
 
         else if err
@@ -134,7 +133,7 @@ module.exports.definition = (req, res, next) ->
                         console.log "[Definition] err: " + JSON.stringify err
                         next err
                     else
-                        res.send 200, success: true
+                        res.status(200).send success: true
                         next()
 
 # DELETE /request/:type/:req_name
@@ -148,7 +147,7 @@ module.exports.remove = (req, res, next) ->
             views = docs.views
             request.get req.appName, req.params, (path) ->
                 if path is "#{req.params.req_name}"
-                    res.send 204, success: true
+                    res.status(204).send success: true
                     next()
                 else
                     delete views["#{path}"]
@@ -158,5 +157,5 @@ module.exports.remove = (req, res, next) ->
                             console.log "[Definition] err: " + err.message
                             next err
                         else
-                            res.send 204, success: true
+                            res.status(204).send success: true
                             next()

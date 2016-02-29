@@ -1,11 +1,3 @@
-git = require 'git-rev'
-
-db = require('../helpers/db_connect_helper').db_connect()
-feed = require '../lib/feed'
-dbHelper = require '../lib/db_remove_helper'
-errors = require '../middlewares/errors'
-encryption = require '../lib/encryption'
-
 addAccess = require('../lib/token').addAccess
 updateAccess = require('../lib/token').updateAccess
 removeAccess = require('../lib/token').removeAccess
@@ -21,7 +13,7 @@ module.exports.create = (req, res, next) ->
         if err
             next err
         else
-            res.send 201, access
+            res.status(201).send access
 
 # PUT /access/:id/
 # this doesn't take care of conflict (erase DB with the sent value)
@@ -31,7 +23,7 @@ module.exports.update = (req, res, next) ->
         if err
             next err
         else
-            res.send 200, success: true
+            res.status(200).send success: true
 
 # DELETE /access/:id/
 # this doesn't take care of conflict (erase DB with the sent value)
@@ -40,4 +32,4 @@ module.exports.remove = (req, res, next) ->
         if err
             next err
         else
-            res.send 204, success: true
+            res.status(204).send success: true

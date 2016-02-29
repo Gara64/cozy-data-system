@@ -9,9 +9,9 @@ module.exports.deleteFiles = (files) ->
         fs.unlinkSync file.path for key, file of files
 
 # Check the application has the permissions to access the route
-module.exports.checkPermissions = (req, permission, id, next) ->
+module.exports.checkPermissions = (req, permission, next) ->
     authHeader = req.header('authorization')
-    checkDocType authHeader, permission, id, (err, appName, isAuthorized) ->
+    checkDocType authHeader, permission, (err, appName, isAuthorized) ->
         if not appName
             err = new Error "Application is not authenticated"
             err.status = 401
@@ -26,9 +26,28 @@ module.exports.checkPermissions = (req, permission, id, next) ->
             next()
 
 
-module.exports.checkPermissionsSync = (req, permission, id) ->
+# Check if the application has access to a specific document.
+module.exports.checkPermissionForRule = (req, permission, next) ->
     authHeader = req.header('authorization')
-    [err, appName, isAuthorized] = checkDocTypeSync authHeader, permission, id
+    checkDocRule authHeader, permission, (err, appName, isAuthorized) ->
+        if not appName
+            err = new Error "Application is not authenticated"
+            err.status = 401
+            next err
+
+        else if not isAuthorized
+            err = new Error "Application is not authorized"
+            err.status = 403
+            next err
+
+        else
+            feed.publish 'sharing.application', appName
+            req.appName = appName
+            next
+
+module.exports.checkPermissionsSync = (req, permission) ->
+    authHeader = req.header('authorization')
+    [err, appName, isAuthorized] = checkDocTypeSync authHeader, permission
     if not appName
         err = new Error "Application is not authenticated"
         err.status = 401
