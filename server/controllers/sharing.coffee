@@ -12,20 +12,6 @@ randomString = (length) ->
         string = string + Math.random().toString(36).substr(2)
     return string.substr 0, length
 
-# Check the sharing permissions are correclty formed
-#checkSharingPermissions = (permissions, callback) ->
-    #async.forEachOf permissions, (item, docType, cb) ->
-        #if permissions[docType]["sharing"] is true
-            #cb()
-        #else
-            #err = new Error "Permissions badly defined"
-            #err.status = 400
-            #cb err
-    #, (err) ->
-        #callback err
-
-
-
 ## XXX Do we need refactoring?
 ## XXX Comments need to be updated
 #
@@ -147,10 +133,6 @@ module.exports.handleAnswer = (req, res, next) ->
 
     # Create an access is the sharing is accepted
     if params.accepted is yes
-        # Check the permissions are well formed
-        #checkSharingPermissions params.permissions, (err) ->
-            #return next err if err?
-
             access =
                 login: params.shareID
                 password: randomString 32
@@ -260,24 +242,6 @@ module.exports.validateTarget = (req, res, next) ->
 
                     req.params = params
                     next()
-
-
-module.exports.update = (req, res, next) ->
-    # push the modification of the share document in the database and if
-    # this operation was successful launch the replication!
-    db.merge req.doc._id, req.doc, (err, res) ->
-        if err?
-            next err
-        else
-            # we create a params structure for the replication function
-            params =
-                pwd: req.answer.pwd
-                url: req.answer.url
-                id: shareDoc.id
-                docIDs: shareDoc.docIDs
-                sync: shareDoc.isSync
-
-            next()
 
 
 module.exports.replicate = (req, res, next) ->
