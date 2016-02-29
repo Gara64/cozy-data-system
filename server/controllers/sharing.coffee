@@ -4,6 +4,7 @@ async = require 'async'
 addAccess = require('../lib/token').addAccess
 db = require('../helpers/db_connect_helper').db_connect()
 
+# XXX Shouldn't we be using a dedicated library?
 # Define random function for application's token
 randomString = (length) ->
     string = ""
@@ -12,34 +13,41 @@ randomString = (length) ->
     return string.substr 0, length
 
 # Check the sharing permissions are correclty formed
-checkSharingPermissions = (permissions, callback) ->
-    async.forEachOf permissions, (item, docType, cb) ->
-        if permissions[docType]["sharing"] is true
-            cb()
-        else 
-            err = new Error "Permissions badly defined"
-            err.status = 400
-            cb err
-    , (err) ->
-        callback err
-
-            
+#checkSharingPermissions = (permissions, callback) ->
+    #async.forEachOf permissions, (item, docType, cb) ->
+        #if permissions[docType]["sharing"] is true
+            #cb()
+        #else
+            #err = new Error "Permissions badly defined"
+            #err.status = 400
+            #cb err
+    #, (err) ->
+        #callback err
 
 
+
+## XXX Do we need refactoring?
+## XXX Comments need to be updated
+#
 # --- Creation of the share document.
 # The share document is a document that represents the sharing process that was
 # initiated and that we store in the database for further use.
 #
 # The structure of a share document is as following
 # shareDoc {
-#   id        -> the id of the sharing process
+#   id        -> the id of the sharing process, it is generated when the
+#                document is inserted in the database
 #   fDoc      -> a filter on the documents to determine which documents need to
 #                be shared
+#                XXX Still usefull?
+#
 #   fUser     -> a filter on the users to determine to whom we need to share
 #                the documents
-#   desc      -> a description of the sharing process
-#   docIDs[]  -> an array containing the ids of the documents to share. These
-#                ids were determined thanks to the filter "fDoc"
+#                XXX Still usefull?
+#
+#   desc      -> a description of what is shared
+#   rules     -> a set of rules describing which documents will be shared
+#                providing their id and their docType
 #   targets[] -> an array containing the users to whom the documents will be
 #                shared. This array contains "target" a custom structure that
 #                will hold all the information required to share with that
@@ -91,12 +99,13 @@ module.exports.requestTarget = (req, res, next) ->
                 next new Error 'No instance domain set'
             else
                 request =
-                    shareID: share.id
+                    shareId: share.id
                     desc: share.desc
                     sync: share.sync
                     hostUrl: domain
-                    docIDs: share.docIDs
-                    permissions: share.permissions
+                    rules: share.rules
+
+                # XXX Debug
                 console.log 'request : ' + JSON.stringify request
 
                 # Notify each target
@@ -117,19 +126,18 @@ module.exports.requestTarget = (req, res, next) ->
                     return next err if err?
 
 
-# Create access if the sharing answer is yes, remove the UserSharing doc otherwise.
-
+# Create access if the sharing answer is yes, remove the UserSharing doc
+# otherwise.
+#
+# Params must contains :
+#   * id (usersharing)
+#   * shareID
+#   * accepted
+#   * targetUrl
+#   * rules
+#   * hostUrl
+#   * XXX password as well?
 module.exports.handleAnswer = (req, res, next) ->
-
-    ### Params must contains :
-    id (usersharing)
-    shareID
-    accepted
-    targetUrl
-    docIDs
-    hostUrl
-    ###
-
 
     if not req.body?
         err = new Error "Bad request"
@@ -140,22 +148,21 @@ module.exports.handleAnswer = (req, res, next) ->
     # Create an access is the sharing is accepted
     if params.accepted is yes
         # Check the permissions are well formed
-        checkSharingPermissions params.permissions, (err) ->
-            return next err if err? 
+        #checkSharingPermissions params.permissions, (err) ->
+            #return next err if err?
 
             access =
                 login: params.shareID
                 password: randomString 32
                 id: params.id
-                permissions: params.permissions
-                docIDs: params.docIDs
+                rules: params.rules
 
             addAccess access, (err, doc) ->
                 return next err if err?
-                
+
                 params.pwd = access.password
                 req.params = params
-                next()           
+                next()
 
     # Delete the associated doc if the sharing is refused
     else
@@ -164,25 +171,27 @@ module.exports.handleAnswer = (req, res, next) ->
             req.params = params
             next()
 
+
 # Send the answer to the host
+# XXX "host"? I suppose the host is the cozy
 module.exports.sendAnswer = (req, res, next) ->
-    
-    console.log 'params ' + JSON.stringify req.params 
-    
-    params = req.body    
+
+    console.log 'params ' + JSON.stringify req.params
+
+    params = req.body
     if not params?
         err = new Error "Bad request"
         err.status = 400
         next err
     else
-        answer = 
+        answer =
             shareID: params.shareID
             url: params.url
             accepted: params.accepted
             pwd: params.pwd
 
         Sharing.answerHost params.hostUrl, answer, (err, result, body) ->
-            if err? 
+            if err?
                 next err
             else if not result?.statusCode?
                 err = new Error "Bad request"
@@ -190,7 +199,6 @@ module.exports.sendAnswer = (req, res, next) ->
                 next err
             else
                 res.send result.statusCode, body
-
 
 
 # Process the answer given by the target regarding the sharing request that was
@@ -205,8 +213,9 @@ module.exports.sendAnswer = (req, res, next) ->
 # }
 #
 module.exports.validateTarget = (req, res, next) ->
+    # XXX DEBUG
     console.log 'answer : ' + JSON.stringify req.body
-    
+
     answer = req.body
     if not answer?
         # send an error explaining that the answer received has not the
@@ -220,7 +229,6 @@ module.exports.validateTarget = (req, res, next) ->
         # represents this sharing process
         db.get answer.shareID, (err, doc) ->
             return next err if err?
-            console.log 'share doc : ' + JSON.stringify doc
 
             # Get the answering target
             target = t for t in doc.targets when t.url = answer.url
@@ -229,10 +237,10 @@ module.exports.validateTarget = (req, res, next) ->
                 err.status = 404
                 next err
             else
-                # Check if the target has accepted the request
-                # Add the password to the target if accepted
-                # Remove the target otherwise        
-                if answer.accepted            
+                # Check if the target has accepted the request. Add the
+                # password to the target if accepted, remove the target
+                # otherwise
+                if answer.accepted
                     target.pwd = answer.pwd
                 else
                     i = doc.targets.indexOf target
@@ -241,7 +249,7 @@ module.exports.validateTarget = (req, res, next) ->
                 # Update db
                 db.merge doc._id, doc, (err, res) ->
                     return next err if err?
-                    
+
                     # Params structure for the replication function
                     params =
                         pwd: answer.pwd
@@ -252,7 +260,6 @@ module.exports.validateTarget = (req, res, next) ->
 
                     req.params = params
                     next()
-
 
 
 module.exports.update = (req, res, next) ->
@@ -270,7 +277,6 @@ module.exports.update = (req, res, next) ->
                 docIDs: shareDoc.docIDs
                 sync: shareDoc.isSync
 
-
             next()
 
 
@@ -285,7 +291,7 @@ module.exports.replicate = (req, res, next) ->
                 err = new Error "Replication failed"
                 err.status = 500
                 next err
-            #TODO : update the db
+            # TODO : update the db
             if repID?
                 res.send 200, success: true
 
