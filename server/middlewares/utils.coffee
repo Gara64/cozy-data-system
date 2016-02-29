@@ -38,20 +38,20 @@ module.exports.getDoc = (req, res, next) ->
 
 # For arbitrary stuff like "send mail to user"
 module.exports.checkPermissionsFactory = (permission) -> (req, res, next) ->
-    checkPermissions req, permission, null, next
+    checkPermissions req, permission, next
 
 # Get the permission from a retrieved document.
 # Required to be processed after "get doc"
 module.exports.checkPermissionsByDoc = (req, res, next) ->
-    checkPermissions req, req.doc.docType,  req.doc._id, next
+    checkPermissions req, req.doc.docType, next
 
 # Get the permission from the request's body
 module.exports.checkPermissionsByBody = (req, res, next) ->
-    checkPermissions req, req.body.docType, req.body._id, next
+    checkPermissions req, req.body.docType, next
 
 # Get the permission from the request's params
 module.exports.checkPermissionsByType = (req, res, next) ->
-    checkPermissions req, req.params.type, null, next
+    checkPermissions req, req.params.type, next
 
 # Check the permission for a post request in replication protocol
 module.exports.checkPermissionsPostReplication = (req, res, next) ->
@@ -81,7 +81,7 @@ module.exports.checkPermissionsPostReplication = (req, res, next) ->
                         checkPermissions req, doc.docType, cb
             else
                 # Manage in request
-                checkPermissions req, doc.docType, doc._id, cb
+                checkPermissions req, doc.docType, cb
         , next
     else
         err = new Error "Forbidden operation"
