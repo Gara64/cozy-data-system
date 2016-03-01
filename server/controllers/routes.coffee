@@ -338,21 +338,21 @@ module.exports =
     #Sharing management
     'sharing/':
         post: [
-            utils.checkPermissionsFactory 'Sharing'
+            utils.checkPermissionsFactory 'sharing'
             sharing.create
             sharing.requestTarget
         ]
 
     'sharing/sendAnswer':
         post: [
-            utils.checkPermissionsFactory 'Sharing'
+            utils.checkPermissionsFactory 'sharing'
             sharing.handleRecipientAnswer
             sharing.sendAnswer
         ]
 
     'sharing/answer':
         post: [
-            utils.checkPermissionsFactory 'Sharing'
+            utils.checkPermissionsFactory 'sharing'
             sharing.validateTarget
             sharing.replicate
         ]
