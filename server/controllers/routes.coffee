@@ -340,7 +340,12 @@ module.exports =
         post: [
             utils.checkPermissionsFactory 'sharing'
             sharing.create
-            sharing.requestTarget
+            sharing.notifyTargets
+        ]
+        delete: [
+            utils.checkPermissionsFactory 'sharing'
+            sharing.delete
+            sharing.notifyTargets
         ]
 
     'sharing/sendAnswer':

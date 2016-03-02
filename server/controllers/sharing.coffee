@@ -60,9 +60,42 @@ module.exports.create = (req, res, next) ->
                 req.share = share
                 next()
 
+# Delete an existing sharing
+# params {
+#    id    -> the id of the sharing process, i.e. the shareID
+# }
+module.exports.delete = (req, res, next) ->
+    share = req.body
+    # check if the information is available
+    if not share?
+        err = new Error "Bad request"
+        err.status = 400
+        next err
+    else
+        # Get all the targets in the sharing document
+        db.get share.id, (err, doc) ->
+            if err?
+                next err
+            else
+                share.targets = doc.targets
+                # Notification message
+                share.desc = "The sharing #{share.id} has been deleted"
 
-# Send a sharing request for each target defined in the sharing
-module.exports.requestTarget = (req, res, next) ->
+                # remove the sharing document in the database
+                db.remove share.id, (err, res) ->
+                    return next err if err?
+                    req.share = share
+                    next()
+
+# Send a notification for each target defined in the share object
+# The minimum structure is the following :
+# share {
+#   id         -> the id of the sharing process, i.e. the shareID
+#   targets[]  -> the targets to notify. Each target must have an url
+#   desc       -> the description of the notification
+# }
+# Note that additional fields can be specified, depending on the request's type
+module.exports.notifyTargets = (req, res, next) ->
     if not req.share?
         err = new Error "Bad request"
         err.status = 400
@@ -74,20 +107,15 @@ module.exports.requestTarget = (req, res, next) ->
             if err?
                 next new Error 'No instance domain set'
             else
-                request =
-                    shareID: share.id
-                    desc: share.desc
-                    sync: share.sync
-                    hostUrl: domain
-                    rules: share.rules
+                share.hostUrl = domain
 
                 # XXX Debug
-                console.log 'request : ' + JSON.stringify request
+                console.log 'request : ' + JSON.stringify share
 
                 # Notify each target
                 async.each share.targets, (target, callback) ->
-                    request.url = target.url
-                    Sharing.notifyTarget target.url, request, (err, result, body) ->
+                   
+                    Sharing.notifyTarget target.url, share, (err, result, body) ->
                         if err?
                             callback err
                         else if not result?.statusCode?
@@ -271,6 +299,5 @@ module.exports.replicate = (req, res, next) ->
             # TODO : update the db
             if repID?
                 res.send 200, success: true
-
     else
         res.send 200, success: true
