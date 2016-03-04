@@ -284,7 +284,7 @@ module.exports.validateTarget = (req, res, next) ->
                 doc.targets.splice i, 1
 
             # Update the Sharing doc
-            db.merge doc._id, doc, (err, res) ->
+            db.merge doc._id, doc, (err, result) ->
                 return next err if err?
 
                 # Retrieve all the docIDs
@@ -314,6 +314,8 @@ module.exports.validateTarget = (req, res, next) ->
 module.exports.replicate = (req, res, next) ->
     replicate = req.params
 
+    console.log 'replicate : ' + JSON.stringify replicate
+
     # Replicate only if the target has accepted, i.e. gave a password
     if replicate.target.pwd?
         Sharing.replicateDocs replicate, (err, repID) ->
@@ -329,13 +331,13 @@ module.exports.replicate = (req, res, next) ->
                     return next err if err?
 
                     # Find the target in the db
-                    targetUrl = req.replicate.target.url
+                    targetUrl = replicate.target.url
                     target = t for t in doc.targets when t.url = targetUrl
                      # Get index of the target and update it
                     i = doc.targets.indexOf target
                     doc.targets[i].repID = repID
 
-                    db.merge replicate.id, (err, res) ->
+                    db.merge replicate.id, doc, (err, result) ->
                         return next err if err?
 
                         res.status(200).send success: true
