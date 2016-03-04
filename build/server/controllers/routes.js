@@ -130,8 +130,5 @@ module.exports = {
   },
   'accounts/reset/': {
     "delete": [account.checkPermissions, account.resetKeys]
-  },
-  'accounts/': {
-    "delete": [account.checkPermissions, account.deleteKeys]
   }
 };
