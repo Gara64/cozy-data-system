@@ -239,17 +239,7 @@ initializeDSView = (callback) ->
                 }
                 """
 
-        # Useful to manage sharing rules
-        sharingRule:
-            all:
-                map: """
-                function(doc) {
-                    if(doc.docType && doc.docType.toLowerCase() === "sharingrule") {
-                        return emit(doc._id, doc);
-                    }
-                }
-                """
-        # Useful to manage received shares
+        # Useful to manage sharing
         sharing:
             all:
                 map: """

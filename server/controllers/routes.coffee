@@ -335,27 +335,27 @@ module.exports =
             account.deleteKeys
         ]
 
-    #Sharing management
+    # Sharing management
     'sharing/':
         post: [
             utils.checkPermissionsFactory 'sharing'
             sharing.create
             sharing.notifyTargets
         ]
+    'sharing/:id':
         delete: [
             utils.checkPermissionsFactory 'sharing'
             sharing.delete
+            sharing.stopReplications
             sharing.notifyTargets
         ]
-
     'sharing/sendAnswer':
         post: [
             utils.checkPermissionsFactory 'sharing'
             sharing.handleRecipientAnswer
             sharing.sendAnswer
         ]
-
-    'sharing/answer':
+    'sharing/receiveAnswer':
         post: [
             utils.checkPermissionsFactory 'sharing'
             sharing.validateTarget
