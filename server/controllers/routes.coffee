@@ -336,26 +336,26 @@ module.exports =
         ]
 
     # Sharing management
-    'sharing/':
+    'services/sharing/':
         post: [
             utils.checkPermissionsFactory 'sharing'
             sharing.create
             sharing.notifyTargets
         ]
-    'sharing/:id':
+    'services/sharing/:id':
         delete: [
             utils.checkPermissionsFactory 'sharing'
             sharing.delete
             sharing.stopReplications
             sharing.notifyTargets
         ]
-    'sharing/sendAnswer':
+    'services/sharing/sendAnswer':
         post: [
             utils.checkPermissionsFactory 'sharing'
             sharing.handleRecipientAnswer
             sharing.sendAnswer
         ]
-    'sharing/receiveAnswer':
+    'services/sharing/answer':
         post: [
             utils.checkPermissionsFactory 'sharing'
             sharing.validateTarget
