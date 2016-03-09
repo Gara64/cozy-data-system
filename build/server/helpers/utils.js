@@ -21,10 +21,10 @@ module.exports.deleteFiles = function(files) {
   }
 };
 
-module.exports.checkPermissions = function(req, permission, id, next) {
+module.exports.checkPermissions = function(req, permission, next) {
   var authHeader;
   authHeader = req.header('authorization');
-  return checkDocType(authHeader, permission, id, function(err, appName, isAuthorized) {
+  return checkDocType(authHeader, permission, function(err, appName, isAuthorized) {
     if (!appName) {
       err = new Error("Application is not authenticated");
       err.status = 401;
@@ -41,10 +41,30 @@ module.exports.checkPermissions = function(req, permission, id, next) {
   });
 };
 
-module.exports.checkPermissionsSync = function(req, permission, id) {
+module.exports.checkPermissionForRule = function(req, permission, next) {
+  var authHeader;
+  authHeader = req.header('authorization');
+  return checkDocRule(authHeader, permission, function(err, appName, isAuthorized) {
+    if (!appName) {
+      err = new Error("Application is not authenticated");
+      err.status = 401;
+      return next(err);
+    } else if (!isAuthorized) {
+      err = new Error("Application is not authorized");
+      err.status = 403;
+      return next(err);
+    } else {
+      feed.publish('sharing.application', appName);
+      req.appName = appName;
+      return next;
+    }
+  });
+};
+
+module.exports.checkPermissionsSync = function(req, permission) {
   var appName, authHeader, err, isAuthorized, ref;
   authHeader = req.header('authorization');
-  ref = checkDocTypeSync(authHeader, permission, id), err = ref[0], appName = ref[1], isAuthorized = ref[2];
+  ref = checkDocTypeSync(authHeader, permission), err = ref[0], appName = ref[1], isAuthorized = ref[2];
   if (!appName) {
     err = new Error("Application is not authenticated");
     err.status = 401;

@@ -49,20 +49,20 @@ module.exports.getDoc = function(req, res, next) {
 
 module.exports.checkPermissionsFactory = function(permission) {
   return function(req, res, next) {
-    return checkPermissions(req, permission, null, next);
+    return checkPermissions(req, permission, next);
   };
 };
 
 module.exports.checkPermissionsByDoc = function(req, res, next) {
-  return checkPermissions(req, req.doc.docType, req.doc._id, next);
+  return checkPermissions(req, req.doc.docType, next);
 };
 
 module.exports.checkPermissionsByBody = function(req, res, next) {
-  return checkPermissions(req, req.body.docType, req.body._id, next);
+  return checkPermissions(req, req.body.docType, next);
 };
 
 module.exports.checkPermissionsByType = function(req, res, next) {
-  return checkPermissions(req, req.params.type, null, next);
+  return checkPermissions(req, req.params.type, next);
 };
 
 module.exports.checkPermissionsPostReplication = function(req, res, next) {
@@ -87,7 +87,7 @@ module.exports.checkPermissionsPostReplication = function(req, res, next) {
           }
         });
       } else {
-        return checkPermissions(req, doc.docType, doc._id, cb);
+        return checkPermissions(req, doc.docType, cb);
       }
     }, next);
   } else {

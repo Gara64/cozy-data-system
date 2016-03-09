@@ -95,7 +95,7 @@ requestOptions = function(req) {
     if ((req.body != null) && Object.keys(req.body).length > 0) {
       bodyToTransmit = JSON.stringify(req.body);
       options['body'] = bodyToTransmit;
-      err = checkPermissions(req, bodyToTransmit.docType, bodyToTransmit._id);
+      err = checkPermissions(req, bodyToTransmit.docType);
       return [err, options];
     }
   }
@@ -138,7 +138,7 @@ module.exports.proxy = function(req, res, next) {
             ref1 = retrieveJsonDocument(content), err = ref1[0], doc = ref1[1];
           }
           if (doc) {
-            err = checkPermissions(req, doc.docType, doc._id);
+            err = checkPermissions(req, doc.docType);
             if (err) {
               res.status(403).send(err);
               return couchReq.end();
@@ -169,7 +169,7 @@ module.exports.proxy = function(req, res, next) {
       data.push(chunk);
       ref1 = retrieveJsonDocument(Buffer.concat(data).toString()), err = ref1[0], doc = ref1[1];
       if (!err) {
-        err = checkPermissions(req, doc.docType, doc._id);
+        err = checkPermissions(req, doc.docType);
         if (err) {
           res.status(403).send(err);
           stream.emit('end');

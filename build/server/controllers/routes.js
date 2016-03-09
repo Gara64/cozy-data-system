@@ -145,13 +145,16 @@ module.exports = {
   'accounts/': {
     "delete": [account.checkPermissions, account.deleteKeys]
   },
-  'sharing/': {
-    post: [sharing.create, sharing.requestTarget]
+  'services/sharing/': {
+    post: [utils.checkPermissionsFactory('sharing'), sharing.create, sharing.sendSharingRequests]
   },
-  'sharing/sendAnswer': {
-    post: [sharing.handleAnswer, sharing.sendAnswer]
+  'services/sharing/:id': {
+    "delete": [utils.checkPermissionsFactory('sharing'), sharing["delete"], sharing.stopReplications, sharing.sendDeleteNotifications]
   },
-  'sharing/answer': {
-    post: [sharing.validateTarget, sharing.replicate]
+  'services/sharing/sendAnswer': {
+    post: [utils.checkPermissionsFactory('sharing'), sharing.handleRecipientAnswer, sharing.sendAnswer]
+  },
+  'services/sharing/answer': {
+    post: [utils.checkPermissionsFactory('sharing'), sharing.validateTarget, sharing.replicate]
   }
 };

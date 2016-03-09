@@ -157,11 +157,6 @@ initializeDSView = function(callback) {
         reduce: "function(key, values) {\n    return true;\n}"
       }
     },
-    sharingRule: {
-      all: {
-        map: "function(doc) {\n    if(doc.docType && doc.docType.toLowerCase() === \"sharingrule\") {\n        return emit(doc._id, doc);\n    }\n}"
-      }
-    },
     sharing: {
       all: {
         map: "function(doc) {\n    if(doc.docType && doc.docType.toLowerCase() === \"sharing\") {\n        return emit(doc._id, doc);\n    }\n}"
