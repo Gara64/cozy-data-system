@@ -16,10 +16,10 @@ generateToken = (length) ->
 
 # Creation of the Sharing document
 #
-# The structure of a Sharing document is as following. 
+# The structure of a Sharing document is as following.
 # Note that the [generated] fields to not need to be indicated
 # share {
-#   id         -> [generated] the id of the sharing document. 
+#   id         -> [generated] the id of the sharing document.
 #                 This id will sometimes be refered as the shareID
 #   desc       -> [optionnal] a human-readable description of what is shared
 #   rules[]    -> a set of rules describing which documents will be shared,
@@ -43,12 +43,38 @@ generateToken = (length) ->
 module.exports.create = (req, res, next) ->
     share = req.body
 
-    # Check the targets are not empty
-    unless share.targets?.length > 0
-        err = new Error "Bad request"
+    # Check that the body isn't empty
+    unless share?
+        err = new Error "Bad request: no body"
         err.status = 400
         return next err
-    
+
+    # Check the targets are not empty...
+    unless share.targets?.length > 0
+        err = new Error "No target specified"
+        err.status = 400
+        return next err
+    # ...and with a url
+    for target in share.targets
+        if not target.url? or target.url is ''
+            err = new Error "No url specified"
+            err.status = 400
+            return next err
+
+    # Check that rules are specified...
+    unless share.rules?.length > 0
+        err = new Error "No rules specified"
+        err.status = 400
+        return next err
+    # ...and well formed
+    for rule in share.rules
+        if not rule.docType? or rule.docType is "" or not rule.id? or
+                rule.id is ""
+            err = new Error "Incorrect rule detected"
+            err.status = 400
+            return next err
+
+
     # The docType is fixed
     share.docType = "sharing"
 
@@ -65,6 +91,7 @@ module.exports.create = (req, res, next) ->
             req.share = share
             next()
 
+
 # Delete an existing sharing, identified by its id
 module.exports.delete = (req, res, next) ->
     shareID = req.params.id
@@ -80,7 +107,7 @@ module.exports.delete = (req, res, next) ->
             if err?
                 next err
             else
-                share = 
+                share =
                     shareID: shareID
                     targets: doc.targets
 
@@ -186,7 +213,7 @@ module.exports.handleRecipientAnswer = (req, res, next) ->
         err = new Error "Bad request"
         err.status = 400
         return next err
-    
+
     # Create an access if the sharing is accepted
     if share.accepted is yes
             access =
@@ -265,7 +292,7 @@ module.exports.validateTarget = (req, res, next) ->
         err = new Error "Bad request"
         err.status = 400
         return next err
-    
+
     # Get the Sharing document thanks to its id
     db.get answer.shareID, (err, doc) ->
         return next err if err?
