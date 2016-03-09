@@ -3,7 +3,7 @@ async = require 'async'
 request = require 'request-json'
 
 # Get the Cozy url
-module.exports.getDomain = (callback) ->
+getDomain = (callback) ->
     db.view 'cozyinstance/all', (err, instance) ->
         return callback err if err?
 
@@ -14,17 +14,31 @@ module.exports.getDomain = (callback) ->
         else
             callback null
 
-# Send a sharing request to a target
-module.exports.notifyTarget = (targetURL, params, callback) ->
-    remote = request.createClient targetURL
-    remote.post "services/sharing/request", params, (err, result, body) ->
-        callback err, result, body
+# Send a notification to a target url on the specified path
+module.exports.notifyTarget = (path, params, callback) ->
+    # Get the cozy url to let the target knows who is the sender
+    getDomain (err, domain) ->
+        if err? or not domain?
+            callback new Error 'No instance domain set'
+        else
+            params.hostUrl = domain
 
-# Send a sharing answer to a sharer
-module.exports.answerHost = (hostURL, answer, callback) ->
-    remote = request.createClient hostURL
-    remote.post "services/sharing/answer", answer, (err, result, body) ->
-        callback err, result, body
+            console.log 'request : ' + JSON.stringify params
+
+            remote = request.createClient params.url
+            remote.post path, params, (err, result, body) ->
+                if err?
+                    callback err
+                else if not result?.statusCode?
+                    err = new Error "Bad request"
+                    err.status = 400
+                    callback err
+                else if body?.error?
+                    err = body
+                    err.status = result.statusCode
+                    callback err
+                else
+                    callback()
 
 # Share the ids to the specified target
 module.exports.replicateDocs = (params, callback) ->
@@ -42,6 +56,8 @@ module.exports.replicateDocs = (params, callback) ->
             target: url + "/services/sharing/replication/" 
             continuous: params.continuous or false
             doc_ids: params.docIDs
+
+        console.log 'params replication : ' + JSON.stringify replication
 
         db.replicate replication.target, replication, (err, body) ->
             if err? then callback err
