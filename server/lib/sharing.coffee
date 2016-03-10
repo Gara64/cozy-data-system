@@ -14,31 +14,43 @@ getDomain = (callback) ->
         else
             callback null
 
+# If the hostUrl is already set, do not get the domain to avoid
+# unacessary call and potential domain mismatch on the target side
+checkDomain = (params, callback) ->
+    unless params.hostUrl?
+        # Get the cozy url to let the target knows who is the sender
+        getDomain (err, domain) ->
+            if err? or not domain?
+                callback new Error 'No instance domain set'
+            else
+                params.hostUrl = domain
+                callback err, params
+    else
+        callback null, params
+
+
 # Send a notification to a target url on the specified path
 module.exports.notifyTarget = (path, params, callback) ->
-    # Get the cozy url to let the target knows who is the sender
-    getDomain (err, domain) ->
-        if err? or not domain?
-            callback new Error 'No instance domain set'
-        else
-            params.hostUrl = domain
+    # Get the domain if not already set
+    checkDomain params, (err, params) ->
 
-            console.log 'request : ' + JSON.stringify params
+        console.log 'request : ' + JSON.stringify params
 
-            remote = request.createClient params.url
-            remote.post path, params, (err, result, body) ->
-                if err?
-                    callback err
-                else if not result?.statusCode?
-                    err = new Error "Bad request"
-                    err.status = 400
-                    callback err
-                else if body?.error?
-                    err = body
-                    err.status = result.statusCode
-                    callback err
-                else
-                    callback()
+        remote = request.createClient params.url
+        remote.post path, params, (err, result, body) ->
+            if err?
+                cb err
+            else if not result?.statusCode?
+                err = new Error "Bad request"
+                err.status = 400
+                cb err
+            else if body?.error?
+                err = body
+                err.status = result.statusCode
+                cb err
+            else
+                cb()
+
 
 # Share the ids to the specified target
 module.exports.replicateDocs = (params, callback) ->
