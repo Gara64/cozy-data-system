@@ -1,6 +1,8 @@
 db = require('../helpers/db_connect_helper').db_connect()
 async = require 'async'
 request = require 'request-json'
+log = require('printit')
+    prefix: 'sharing'
 
 # Get the Cozy url
 getDomain = (callback) ->
@@ -14,33 +16,51 @@ getDomain = (callback) ->
         else
             callback null
 
+# If the hostUrl is already set, do not get the domain to avoid
+# unacessary call and potential domain mismatch on the target side
+checkDomain = (params, callback) ->
+    unless params.hostUrl?
+        # Get the cozy url to let the target knows who is the sender
+        getDomain (err, domain) ->
+            if err? or not domain?
+                callback new Error 'No instance domain set'
+            else
+                params.hostUrl = domain
+                callback err, params
+    else
+        callback null, params
+
+
 # Send a notification to a target url on the specified path
+# Params must at least contain:
+#   url     -> the url of the target
+#   hostUrl -> [optionnal] the url of the cozy. Will be get if not set
 module.exports.notifyTarget = (path, params, callback) ->
-    # Get the cozy url to let the target knows who is the sender
-    getDomain (err, domain) ->
-        if err? or not domain?
-            callback new Error 'No instance domain set'
-        else
-            params.hostUrl = domain
+    # Get the domain if not already set
+    checkDomain params, (err, params) ->
 
-            console.log 'request : ' + JSON.stringify params
+        remote = request.createClient params.url
+        remote.post path, params, (err, result, body) ->
+            if err?
+                callback err
+            else if not result?.statusCode?
+                err = new Error "Bad request"
+                err.status = 400
+                callback err
+            else if body?.error?
+                err = body
+                err.status = result.statusCode
+                callback err
+            else
+                callback()
 
-            remote = request.createClient params.url
-            remote.post path, params, (err, result, body) ->
-                if err?
-                    callback err
-                else if not result?.statusCode?
-                    err = new Error "Bad request"
-                    err.status = 400
-                    callback err
-                else if body?.error?
-                    err = body
-                    err.status = result.statusCode
-                    callback err
-                else
-                    callback()
 
-# Share the ids to the specified target
+# Replicate documents to the specified target
+# Params must contain:
+#   id         -> the Sharing id, used as a login
+#   target     -> contains the url and the token of the target
+#   docIDs     -> the ids of the documents to replicate
+#   continuous -> [optionnal] if the sharing is synchronous or not
 module.exports.replicateDocs = (params, callback) ->
     unless params.target? and params.docIDs? and params.id?
         err = new Error 'Parameters missing'
@@ -57,7 +77,7 @@ module.exports.replicateDocs = (params, callback) ->
             continuous: params.continuous or false
             doc_ids: params.docIDs
 
-        console.log 'params replication : ' + JSON.stringify replication
+        log.info  "Replicate " + JSON.stringify params.docIDs + " to " + url
 
         db.replicate replication.target, replication, (err, body) ->
             if err? then callback err
@@ -65,7 +85,6 @@ module.exports.replicateDocs = (params, callback) ->
                 err = "Replication failed"
                 callback err
             else
-                console.log JSON.stringify body
                 # The _local_id field is returned only if continuous
                 callback null, body._local_id
 
