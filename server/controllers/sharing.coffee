@@ -4,7 +4,7 @@ crypto = require "crypto"
 log = require('printit')
     prefix: 'sharing'
 
-addAccess = require('../lib/token').addAccess
+libToken = require('../lib/token')
 db = require('../helpers/db_connect_helper').db_connect()
 
 TOKEN_LENGTH = 32
@@ -74,7 +74,6 @@ module.exports.create = (req, res, next) ->
             err.status = 400
             return next err
 
-
     # The docType is fixed
     share.docType = "sharing"
 
@@ -127,31 +126,51 @@ module.exports.delete = (req, res, next) ->
 #   targets[]  -> the targets to notify. Each target must have an url
 #                 and a preToken
 module.exports.sendSharingRequests = (req, res, next) ->
-    share = req.share
-    
+
     if not req.share?
         err = new Error "Bad request"
         err.status = 400
-        next err
-    else
-        # Notify each target
-        async.each share.targets, (target, callback) ->
-            request = 
-                url: target.url
-                preToken: target.preToken
-                shareID: share.shareID
-                rules: share.rules
-                desc: share.desc
+        return next err
 
-            log.info "Send sharing request to : #{request.url}"
+    share = req.share
 
-            Sharing.notifyTarget "services/sharing/request", request, (err, result) ->
-                callback err
-        , (err) ->
-            if err?
-                next err
-            else
-                res.status(200).send success: true
+    # Check share object structure: first is the presence of a shareID
+    if not share.shareID? or share.shareID is ""
+        err = new Error "No shareID provided"
+        err.status = 400
+        return next err
+    # then come the targets
+    if not share.targets?
+        err = new Error "No target provided"
+        err.status = 400
+        return next err
+    # and its structure: we need an url and a preToken for each of them
+    for target in share.targets
+        if not target.url? or target.url is "" or not target.preToken? or
+                target.preToken is ""
+            err = new Error "Incorrect target structure detected"
+            err.status = 400
+            return next err
+
+    # Notify each target
+    async.each share.targets, (target, callback) ->
+        request =
+            url: target.url
+            preToken: target.preToken
+            shareID: share.shareID
+            rules: share.rules
+            desc: share.desc
+
+        log.info "Send sharing request to : #{request.url}"
+
+        Sharing.notifyTarget "services/sharing/request", request,
+        (err, result) ->
+            callback err
+    , (err) ->
+        if err?
+            next err
+        else
+            res.status(200).send success: true
 
 
 # Send a sharing request for each target defined in the share object
@@ -170,7 +189,7 @@ module.exports.sendDeleteNotifications = (req, res, next) ->
     else
         # Notify each target
         async.each share.targets, (target, callback) ->
-            notif = 
+            notif =
                 url: target.url
                 token: target.token
                 shareID: share.shareID
@@ -178,7 +197,8 @@ module.exports.sendDeleteNotifications = (req, res, next) ->
 
             log.info "Send sharing cancel notification to : #{notif.url}"
 
-            Sharing.notifyTarget "services/sharing/cancel", notif, (err, result) ->
+            Sharing.notifyTarget "services/sharing/cancel", notif,
+                    (err, result) ->
                 callback err
         , (err) ->
             if err?
@@ -205,29 +225,45 @@ module.exports.sendDeleteNotifications = (req, res, next) ->
 #   rules     -> the set of rules specifying which documents are shared,
 #                with their docTypes.
 module.exports.handleRecipientAnswer = (req, res, next) ->
-    share = req.body
 
-    # Check params
-    unless share.id? and share.shareID? and share.accepted? \
-    and share.url? and share.rules? and share.hostUrl?
+    if not req.body?
         err = new Error "Bad request"
         err.status = 400
         return next err
 
+    share = req.body
+
+    # Check share structure
+    unless share.id? and share.id isnt "" and share.shareID? and
+            share.shareID isnt "" and share.accepted? and
+            share.accepted isnt "" and share.url? and share.url isnt "" and
+            share.hostUrl? and share.hostUrl isnt "" and share.url? and
+            share.rules?.length > 0
+        err = new Error "Bad request"
+        err.status = 400
+        return next err
+    # ...and rules' as well
+    for rule in share.rules
+        unless rule.id? and rule.id isnt "" and rule.docType? and
+                rule.docType isnt ""
+            err = new Error "Bad request"
+            err.status = 400
+            return next err
+
     # Create an access if the sharing is accepted
     if share.accepted is yes
-            access =
-                login: share.shareID
-                password: generateToken TOKEN_LENGTH
-                id: share.id
-                rules: share.rules
+        access =
+            login: share.shareID
+            password: generateToken TOKEN_LENGTH
+            id: share.id
+            rules: share.rules
 
-            addAccess access, (err, doc) ->
-                return next err if err?
+        addAccess access, (err, doc) ->
+            return next err if err?
 
-                share.token = access.password
-                req.share = share
-                next()
+            share.token = access.password
+            req.share = share
+            next()
 
         # TODO : enforce the docType protection with the couchDB's document
         # update validation
@@ -252,7 +288,7 @@ module.exports.handleRecipientAnswer = (req, res, next) ->
 #   hostUrl   -> the url of the sharer's cozy
 module.exports.sendAnswer = (req, res, next) ->
     share = req.share
-    
+
     if not share?
         err = new Error "Bad request"
         err.status = 400
@@ -269,7 +305,8 @@ module.exports.sendAnswer = (req, res, next) ->
 
         log.info "Send sharing answer to : #{answer.url}"
 
-        Sharing.notifyTarget "services/sharing/answer", answer, (err, result, body) ->
+        Sharing.notifyTarget "services/sharing/answer", answer,
+        (err, result, body) ->
             if err?
                 next err
             else
@@ -298,7 +335,7 @@ module.exports.validateTarget = (req, res, next) ->
         return next err if err?
 
         # Get the answering target
-        target = t for t in doc.targets when t.url is answer.hostUrl
+        target = (t for t in doc.targets when t.url is answer.hostUrl)
 
         unless target?
             err = new Error answer.hostUrl + " not found for this sharing"
@@ -376,7 +413,8 @@ module.exports.replicate = (req, res, next) ->
 
                         # Find the target in the db
                         targetUrl = replicate.target.url
-                        target = t for t in doc.targets when t.url is targetUrl
+                        target = (t for t in doc.targets when \
+                            t.url is targetUrl)
                          # Get index of the target and update it
                         i = doc.targets.indexOf target
                         doc.targets[i].repID = repID
