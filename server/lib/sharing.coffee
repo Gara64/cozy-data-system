@@ -39,17 +39,17 @@ module.exports.notifyTarget = (path, params, callback) ->
         remote = request.createClient params.url
         remote.post path, params, (err, result, body) ->
             if err?
-                cb err
+                callback err
             else if not result?.statusCode?
                 err = new Error "Bad request"
                 err.status = 400
-                cb err
+                callback err
             else if body?.error?
                 err = body
                 err.status = result.statusCode
-                cb err
+                callback err
             else
-                cb()
+                callback()
 
 
 # Share the ids to the specified target

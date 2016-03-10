@@ -222,6 +222,7 @@ module.exports.sendAnswer = (req, res, next) ->
     else
         answer =
             shareID: share.shareID
+            hostUrl: share.url
             url: share.hostUrl
             accepted: share.accepted
             preToken: share.preToken
