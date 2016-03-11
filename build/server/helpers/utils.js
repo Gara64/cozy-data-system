@@ -41,26 +41,6 @@ module.exports.checkPermissions = function(req, permission, next) {
   });
 };
 
-module.exports.checkPermissionForRule = function(req, permission, next) {
-  var authHeader;
-  authHeader = req.header('authorization');
-  return checkDocRule(authHeader, permission, function(err, appName, isAuthorized) {
-    if (!appName) {
-      err = new Error("Application is not authenticated");
-      err.status = 401;
-      return next(err);
-    } else if (!isAuthorized) {
-      err = new Error("Application is not authorized");
-      err.status = 403;
-      return next(err);
-    } else {
-      feed.publish('sharing.application', appName);
-      req.appName = appName;
-      return next;
-    }
-  });
-};
-
 module.exports.checkPermissionsSync = function(req, permission) {
   var appName, authHeader, err, isAuthorized, ref;
   authHeader = req.header('authorization');

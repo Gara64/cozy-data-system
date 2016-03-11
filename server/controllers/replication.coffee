@@ -95,12 +95,10 @@ requestOptions = (req) ->
 
 module.exports.proxy = (req, res, next) ->
     [err, options] = requestOptions req
-
     # Device isn't authorized if err
     return res.status(403).send err if err?
 
     stream = through()
-
     couchReq  = request options
         # Receive from couchDB and transmit it to device
         .on 'response', (response) ->
@@ -176,7 +174,6 @@ module.exports.proxy = (req, res, next) ->
                 else
                     permissions = true
                     stream.emit 'data', Buffer.concat(data)
-
 
     req.on 'end', ->
         stream.emit 'end'
