@@ -138,7 +138,7 @@ module.exports.sendDeleteNotifications = (req, res, next) ->
                 url: target.url
                 token: target.token
                 shareID: share.shareID
-                desc: "The sharing #{shareID} has been deleted"
+                desc: "The sharing #{share.shareID} has been deleted"
 
             Sharing.notifyTarget "services/sharing/cancel", notif, (err, result) ->
                 callback err
@@ -162,7 +162,6 @@ module.exports.sendDeleteNotifications = (req, res, next) ->
 #   * accepted  -> boolean specifying if the share was accepted or not
 #   * preToken -> the token sent by the sharer to authenticate the receiver
 #   * url       -> the url of the cozy
-#   * hostUrl   -> the url of the cozy's sharer
 #   * rules     -> the set of rules specifying which documents are shared,
 #                  with their docTypes.
 #   * hostUrl   -> the url of the sharer's cozy
@@ -196,7 +195,7 @@ module.exports.handleRecipientAnswer = (req, res, next) ->
 
     # Delete the Sharing doc if the sharing is refused
     else
-        db.remove req.share.id, (err, res) ->
+        db.remove share.id, (err, res) ->
             return next err if err?
             req.share = share
             next()
