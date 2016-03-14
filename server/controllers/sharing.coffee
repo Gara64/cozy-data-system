@@ -54,8 +54,7 @@ module.exports.create = (req, res, next) ->
 
     # Generate a preToken for each target
     for target in share.targets
-        do (target) ->
-            target.preToken = generateToken TOKEN_LENGTH
+        target.preToken = generateToken TOKEN_LENGTH
 
     # save the share document in the database
     db.save share, (err, res) ->
