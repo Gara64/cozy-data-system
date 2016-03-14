@@ -329,11 +329,7 @@ module.exports =
             account.checkPermissions
             account.resetKeys
         ]
-    'accounts/':
-        delete: [
-            account.checkPermissions
-            account.deleteKeys
-        ]
+
 
     # Sharing management
     'services/sharing/':
@@ -361,3 +357,4 @@ module.exports =
             sharing.validateTarget
             sharing.replicate
         ]
+
