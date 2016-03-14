@@ -1,7 +1,7 @@
 ###
 
- # How to run the tests:
- ## Installing dependencies
+ # How to run the tests manually:
+ ## Installing dependencies (globally)
 
  ```bash
  sudo npm install -g coffeetape faucet
@@ -21,9 +21,6 @@
  "[...] cannot find module 'tape'"
 
  Locate your `node_modules` folder on your machine.
- ```bash
- find /usr/local -type d -name "node_modules"
- ```
 
  Export the global variable NODE_PATH
  ```bash
@@ -42,72 +39,20 @@ proxyquire = require 'proxyquire'
 
 # -- GLOBAL VARIABLES
 res = {}
-res_err = {}
 
-
-# -- MOCKUPS
-# Create a mockup of the database
+# -- MOCKUPS / STUBS
+# Create an empty stub of the database. It will be populated later on.
 dbStub = {}
-dbStorageStub = {}
-dbStub.save = (el, cb) ->
-    res = { _id: 1 }
-    err = null
-    dbStorageStub = el
-    cb err, res
 
-dbStub.get = (id, cb) ->
-    err = null
-    res = { targets: [{url: 'lala', preToken: 'hihi'}], desc: 'fake!' }
-    cb err, res
-
-dbStubWasRemoved = false
-dbStub.remove = (id, cb) ->
-    err = null
-    res = {}
-    dbStubWasRemoved = true
-    cb err, res
-
-# Create a mockup of the db_connect_helper
+# Create a stub of the db_connect_helper
 db_connectStub = {}
 db_connectStub.db_connect =  ->
     return dbStub
 
-# Mockup of lib/sharing
-sharingStub = {}
-
-sharingStubHostUrl = false
-sharingStub.getDomain = (cb) ->
-    sharingStubHostUrl = true
-    console.log "DEBUG: getDomain called"
-    err = null
-    hostUrl = "localhost"
-    cb err, hostUrl
-
-sharingStubNotifyCount = 0
-sharingStub.notifyTarget = (url, share, cb) ->
-    sharingStubNotifyCount++
-    sharingStubShare = share
-    cb
-
-# Mocking /lib/token addAccess function
-libTokenStub = {}
-accessAdded = false
-
-libTokenStub.addAccess = (access, cb) ->
-    console.log "DEBUG: addAccessFn"
-    accessAdded = true
-    doc = 'fake doc'
-    err = null
-    cb err, doc
-
-
 # Through proxyquire tell sharing to use the mockups instead of the real
 # functions
 sharing = proxyquire '../server/controllers/sharing',
-    { '../helpers/db_connect_helper': db_connectStub },
-    { '../lib/sharing': sharingStub },
-    { '../lib/token': libTokenStub }
-
+    { '../helpers/db_connect_helper': db_connectStub }
 
 
 ###############################################################################
@@ -122,114 +67,102 @@ test 'Testing `create` module', (assert) ->
     err = new Error "Bad request"
     err.status = 400
     sharing.create req, res, (_err) ->
-        res_err = _err
-
-    assert.deepEqual res_err, err,
-        "create: Return error if body is empty"
+        assert.deepEqual _err, err,
+            "create: Return error if body is empty"
 
     # -- TEST 2
     # if body.targets.length <= 0 a bad request error is returned
-    res_err = null
     req.body = {}
     req.body.targets = [{}]
     err = new Error "No target specified"
     err.status = 400
 
     sharing.create req, res, (_err) ->
-        res_err = _err
-
-    assert.deepEqual res_err, err,
-        "create: Return error if targets is empty"
+        assert.deepEqual _err, err,
+            "create: Return error if targets is empty"
 
     # -- TEST 3
     # if the url of a target is not specified throw an error
-    res_err = null
     req.body.targets = [ {url: 'uneurl.fr'}, {url: ''} ]
     err = new Error "No url specified"
     err.status = 400
 
     sharing.create req, res, (_err) ->
-        res_err = _err
-
-    assert.deepEqual res_err, err,
-        "create: Return error if url is empty"
+        assert.deepEqual _err, err,
+            "create: Return error if url is empty"
 
     # -- TEST 4
     # if body.rules doesn't exist, throw an error
-    res_err = null
     req.body.targets = [ {url: 'uneurl.fr'} ]
     req.body.rules = []
     err = new Error "No rules specified"
     err.status = 400
 
     sharing.create req, res, (_err) ->
-        res_err = _err
-
-    assert.deepEqual res_err, err,
-        "create: Return error if rules is empty"
-
+        assert.deepEqual _err, err,
+            "create: Return error if rules is empty"
 
     # -- TEST 5
     # if a rule is incorrect, throw an error => docType empty
-    res_err = null
     req.body.targets = [ {url: 'uneurl.fr'} ]
     req.body.rules = [{id: 'unid', docType: ''}]
     err = new Error "Incorrect rule detected"
     err.status = 400
 
     sharing.create req, res, (_err) ->
-        res_err = _err
-
-    assert.deepEqual res_err, err,
-        "create: Return error if a rule is incorrect (docType empty)"
+        assert.deepEqual _err, err,
+            "create: Return error if a rule is incorrect (docType empty)"
 
     # -- TEST 6
     # if a rule is incorrect, throw an error => id empty
-    res_err = null
     req.body.rules = [{id: '', docType: 'undoctype'}]
     err = new Error "Incorrect rule detected"
     err.status = 400
 
     sharing.create req, res, (_err) ->
-        res_err = _err
-
-    assert.deepEqual res_err, err,
-        "create: Return error if a rule is incorrect (id empty)"
+        assert.deepEqual _err, err,
+            "create: Return error if a rule is incorrect (id empty)"
 
     # -- TEST 7
     # if a rule is incorrect, throw an error => id missing
-    res_err = null
     req.body.rules = [{docType: 'undoctype'}]
 
     sharing.create req, res, (_err) ->
-        res_err = _err
-
-    assert.deepEqual res_err, err,
-        "create: Return error if a rule is incorrect (id missing)"
+        assert.deepEqual _err, err,
+            "create: Return error if a rule is incorrect (id missing)"
 
     # -- TEST 8
     # if a rule is incorrect, throw an error => docType missing
-    res_err = null
     req.body.rules = [{id: 'unid'}]
 
     sharing.create req, res, (_err) ->
-        res_err = _err
-
-    assert.deepEqual res_err, err,
-        "create: Return error if a rule is incorrect (docType missing)"
+        assert.deepEqual _err, err,
+            "create: Return error if a rule is incorrect (docType missing)"
 
     # -- TEST 9
     # If body is correct no error is returned
-    res_err = null
+
+    # First we populate the database stub with the functions that'll be called
+    dbStorageStub = {} # will be used to check what is added in the database
+    dbStub.save = (el, cb) ->
+        res = { _id: 1 }
+        err = null
+        dbStorageStub = el
+        cb err, res
+
+    dbStub.get = (id, cb) ->
+        err = null
+        res = { targets: [{url: 'lala', preToken: 'hihi'}], desc: 'fake!' }
+        cb err, res
+
     req.body.rules = [{id: 'unid', docType: 'undocType'}]
 
     sharing.create req, res, (_err) ->
-        res_err = _err
-
-    assert.error res_err, "create: function should not throw an error"
+        assert.error _err, "create: function should not throw an error"
 
     # -- TEST 10
-    # Test that docType is automatically added and set to "sharing"
+    # Test that docType is automatically added and set to "sharing".
+    # To do so we use the object we declared in the test above
     req.body.docType = "sharing"
     assert.deepEqual dbStorageStub, req.body,
         "create: docType is automatically added and set to \"sharing\""
@@ -250,160 +183,35 @@ test 'Testing `delete` module', (assert) ->
 
     # -- TEST 1
     # if params.id is missing an error is returned
-    res_err = null
     req = { params: {} }
     err = new Error "Bad request"
     err.status = 400
 
     sharing.delete req, res, (_err) ->
-        res_err = _err
-
-    assert.deepEqual res_err, err,
-        "delete: Return bad request error if params.id is missing"
+        assert.deepEqual _err, err,
+            "delete: Return bad request error if params.id is missing"
 
     # -- TEST 2
     # if params is ok then db.remove function is called
-    res_err = null
     req.params.id = 1
+
+    # we populate the database stub with the remove function and we check that
+    # is it indeed called thanks to the dbStubWasRemoved boolean
+    dbStubWasRemoved = false
+    dbStub.remove = (id, cb) ->
+        err = null
+        res = {}
+        dbStubWasRemoved = true
+        cb err, res
+
     sharing.delete req, res, (_err) ->
-        res_err = _err
+        assert.ok dbStubWasRemoved,
+            "delete: db.remove function is called if params is ok"
 
-    assert.ok dbStubWasRemoved,
-        "delete: db.remove function is called if params is ok"
-
-    # -- TEST 3
-    # if params is ok no error is returned
-    assert.error res_err,
-        "delete: no error is returned if params is ok"
-
-    assert.end()
-
-
-test 'Testing `notifyTargets` module', (assert) ->
-
-    # -- TEST 1
-    # if req.share is missing an error is returned
-    res_err = null
-    req = {}
-    err = new Error "Bad request"
-    err.status = 400
-
-    sharing.notifyTargets req, res, (_err) ->
-        res_err = _err
-
-    assert.deepEqual res_err, err,
-        "notifyTargets: Return bad request error if req.share is missing"
-
-    # -- TEST 2
-    # return an error if the shareID is missing
-    res_err = null
-    req = { share: {} }
-    err = new Error "No shareID provided"
-    err.status = 400
-
-    sharing.notifyTargets req, res, (_err) ->
-        res_err = _err
-
-    assert.deepEqual res_err, err,
-        "notifyTargets: return an error if shareID is missing"
-
-    # -- TEST 3
-    # return an error if the shareID is empty
-    res_err = null
-    req.share.shareID = ""
-
-    sharing.notifyTargets req, res, (_err) ->
-        res_err = _err
-
-    assert.deepEqual res_err, err,
-        "notifyTargets: return an error if shareID is empty"
-
-    # -- TEST 4
-    # return an error if targets is missing
-    res_err = null
-    req.share.shareID = 1
-    err = new Error "No target provided"
-    err.status = 400
-
-    sharing.notifyTargets req, res, (_err) ->
-        res_err = _err
-
-    assert.deepEqual res_err, err,
-        "notifyTargets: return an error if targets is missing"
-
-    # -- TEST 5
-    # return an error if a target object is incorrect => target.url missing
-    res_err = null
-    req.share.targets = [{url: 'hey@hey.fr', preToken: 'hahaha'},
-                         {preToken: 'hihihi'}]
-    err = new Error "Incorrect target structure detected"
-    err.status = 400
-
-    sharing.notifyTargets req, res, (_err) ->
-        res_err = _err
-
-    assert.deepEqual res_err, err,
-        "notifyTargets: return an error if target.url is missing"
-
-    # -- TEST 6
-    # return an error if a target object is incorrect => target.url empty
-    res_err = null
-    req.share.targets = [{url: 'hey@hey.fr', preToken: 'hahaha'},
-                         {url: '', preToken: 'hihihi'}]
-
-    sharing.notifyTargets req, res, (_err) ->
-        res_err = _err
-
-    assert.deepEqual res_err, err,
-        "notifyTargets: return an error if target.url is empty"
-
-    # -- TEST 7
-    # return an error if a target object is incorrect => target.preToken
-    # missing
-    res_err = null
-    req.share.targets = [{url: 'hey@hey.fr', preToken: 'hahaha'},
-                         {url: 'yo@yo.fr'}]
-
-    sharing.notifyTargets req, res, (_err) ->
-        res_err = _err
-
-    assert.deepEqual res_err, err,
-        "notifyTargets: return an error if target.preToken is missing"
-
-    # -- TEST 8
-    # return an error if a target object is incorrect => target.preToken empty
-    res_err = null
-    req.share.targets = [{url: 'hey@hey.fr', preToken: 'hahaha'},
-                         {url: 'yo@yo.fr', preToken: ''}]
-
-    sharing.notifyTargets req, res, (_err) ->
-        res_err = _err
-
-    assert.deepEqual res_err, err,
-        "notifyTargets: return an error if target.preToken is empty"
-
-    # -- TEST 9
-    # test that no error is returned if share object is ok
-    res_err = null
-    sharingStubNotifyCount = 0 # reset counter for TEST 11
-    req.share.targets = [{url: 'hey@hey.fr', preToken: 'hahaha'},
-                         {url: 'yo@yo.fr', preToken: 'hihihi'}]
-
-    sharing.notifyTargets req, res, (_err) ->
-        res_err = _err
-
-    assert.error res_err,
-        "notifyTargets: no error is returned if share object is ok"
-
-    ## -- TEST 10
-    ## test that hostUrl is added to share object transmitted to targets
-    #assert.ok sharingStubHostUrl,
-        #"notifyTargets: hostUrl is added to share object transmitted"
-
-    ## -- TEST 11
-    ## test that we call the function notifyTarget for each target
-    #assert.equal sharingStubNotifyCount, req.share.targets.length,
-        #"notifyTargets: function notifyTarget called for each target"
+        # -- TEST 3
+        # if params is ok no error is returned
+        assert.error _err,
+            "delete: no error is returned if params is ok"
 
     assert.end()
 
@@ -412,20 +220,17 @@ test 'Testing `handleRecipientAnswer` module', (assert) ->
 
     # -- TEST 1
     # return an error if body of request is missing
-    res_err = null
     req = {}
     err = new Error "Bad request"
     err.status = 400
 
     sharing.handleRecipientAnswer req, res, (_err) ->
-        res_err = _err
+        assert.deepEqual _err, err,
+            "handleRecipientAnswer: return error if req.body is missing"
 
-    assert.deepEqual res_err, err,
-        "handleRecipientAnswer: return error if req.body is missing"
 
     # -- TEST 2
     # return an error if structure of body is incorrect => id is missing
-    res_err = null
     req.body = {
         #id: 0,
         shareID: 1,
@@ -436,14 +241,12 @@ test 'Testing `handleRecipientAnswer` module', (assert) ->
     }
 
     sharing.handleRecipientAnswer req, res, (_err) ->
-        res_err = _err
+        assert.deepEqual _err, err,
+            "handleRecipientAnswer: return error if req.body.id is missing"
 
-    assert.deepEqual res_err, err,
-        "handleRecipientAnswer: return error is req.body.id is missing"
 
     # -- TEST 3
     # return an error if structure of body is incorrect => id is empty
-    res_err = null
     req.body = {
         id: '',
         shareID: 1,
@@ -454,14 +257,12 @@ test 'Testing `handleRecipientAnswer` module', (assert) ->
     }
 
     sharing.handleRecipientAnswer req, res, (_err) ->
-        res_err = _err
+        assert.deepEqual _err, err,
+            "handleRecipientAnswer: return error if req.body.id is empty"
 
-    assert.deepEqual res_err, err,
-        "handleRecipientAnswer: return error is req.body.id is empty"
 
     # -- TEST 4
     # return an error if structure of body is incorrect => shareID is missing
-    res_err = null
     req.body = {
         id: 0,
         #shareID: 1,
@@ -472,14 +273,12 @@ test 'Testing `handleRecipientAnswer` module', (assert) ->
     }
 
     sharing.handleRecipientAnswer req, res, (_err) ->
-        res_err = _err
+        assert.deepEqual _err, err,
+            "handleRecipientAnswer: return error if req.body.shareID is missing"
 
-    assert.deepEqual res_err, err,
-        "handleRecipientAnswer: return error is req.body.shareID is missing"
 
     # -- TEST 5
     # return an error if structure of body is incorrect => shareID is empty
-    res_err = null
     req.body = {
         id: 0,
         shareID: '',
@@ -490,14 +289,12 @@ test 'Testing `handleRecipientAnswer` module', (assert) ->
     }
 
     sharing.handleRecipientAnswer req, res, (_err) ->
-        res_err = _err
+        assert.deepEqual _err, err,
+            "handleRecipientAnswer: return error if req.body.shareID is empty"
 
-    assert.deepEqual res_err, err,
-        "handleRecipientAnswer: return error is req.body.shareID is empty"
 
     # -- TEST 6
     # return an error if structure of body is incorrect => accepted is missing
-    res_err = null
     req.body = {
         id: 0,
         shareID: 1,
@@ -508,14 +305,13 @@ test 'Testing `handleRecipientAnswer` module', (assert) ->
     }
 
     sharing.handleRecipientAnswer req, res, (_err) ->
-        res_err = _err
+        assert.deepEqual _err, err,
+            "handleRecipientAnswer: return error if req.body.accepted is
+            missing"
 
-    assert.deepEqual res_err, err,
-        "handleRecipientAnswer: return error is req.body.accepted is missing"
 
     # -- TEST 7
     # return an error if structure of body is incorrect => accepted is empty
-    res_err = null
     req.body = {
         id: 0,
         shareID: 1,
@@ -526,14 +322,12 @@ test 'Testing `handleRecipientAnswer` module', (assert) ->
     }
 
     sharing.handleRecipientAnswer req, res, (_err) ->
-        res_err = _err
+        assert.deepEqual _err, err,
+            "handleRecipientAnswer: return error if req.body.accepted is empty"
 
-    assert.deepEqual res_err, err,
-        "handleRecipientAnswer: return error is req.body.accepted is empty"
 
     # -- TEST 8
     # return an error if structure of body is incorrect => url is missing
-    res_err = null
     req.body = {
         id: 0,
         shareID: 1,
@@ -544,14 +338,12 @@ test 'Testing `handleRecipientAnswer` module', (assert) ->
     }
 
     sharing.handleRecipientAnswer req, res, (_err) ->
-        res_err = _err
+        assert.deepEqual _err, err,
+            "handleRecipientAnswer: return error if req.body.url is missing"
 
-    assert.deepEqual res_err, err,
-        "handleRecipientAnswer: return error is req.body.url is missing"
 
     # -- TEST 9
     # return an error if structure of body is incorrect => url is empty
-    res_err = null
     req.body = {
         id: 0,
         shareID: 1,
@@ -562,32 +354,28 @@ test 'Testing `handleRecipientAnswer` module', (assert) ->
     }
 
     sharing.handleRecipientAnswer req, res, (_err) ->
-        res_err = _err
+        assert.deepEqual _err, err,
+            "handleRecipientAnswer: return error if req.body.url is empty"
 
-    assert.deepEqual res_err, err,
-        "handleRecipientAnswer: return error is req.body.url is empty"
 
     # -- TEST 10
     # return an error if structure of body is incorrect => hostUrl is missing
-    res_err = null
     req.body = {
         id: 0,
         shareID: 1,
         accepted: true,
         url: 'foo@bar.baz',
-        rules: [{id: 2, docType: 'event'}, {id: 3, docType: 'event'}],
+        rules: [{id: 2, docType: 'event'}, {id: 3, docType: 'event'}]
         #hostUrl: 'me@localhost.me'
     }
 
     sharing.handleRecipientAnswer req, res, (_err) ->
-        res_err = _err
+        assert.deepEqual _err, err,
+            "handleRecipientAnswer: return error if req.body.hostUrl is missing"
 
-    assert.deepEqual res_err, err,
-        "handleRecipientAnswer: return error is req.body.hostUrl is missing"
 
     # -- TEST 11
     # return an error if structure of body is incorrect => hostUrl is empty
-    res_err = null
     req.body = {
         id: 0,
         shareID: 1,
@@ -598,14 +386,12 @@ test 'Testing `handleRecipientAnswer` module', (assert) ->
     }
 
     sharing.handleRecipientAnswer req, res, (_err) ->
-        res_err = _err
+        assert.deepEqual _err, err,
+            "handleRecipientAnswer: return error if req.body.hostUrl is empty"
 
-    assert.deepEqual res_err, err,
-        "handleRecipientAnswer: return error is req.body.hostUrl is empty"
 
     # -- TEST 12
     # return an error if structure of body is incorrect => rules is missing
-    res_err = null
     req.body = {
         id: 0,
         shareID: 1,
@@ -616,14 +402,12 @@ test 'Testing `handleRecipientAnswer` module', (assert) ->
     }
 
     sharing.handleRecipientAnswer req, res, (_err) ->
-        res_err = _err
+        assert.deepEqual _err, err,
+            "handleRecipientAnswer: return error if req.body.rules is missing"
 
-    assert.deepEqual res_err, err,
-        "handleRecipientAnswer: return error is req.body.rules is missing"
 
     # -- TEST 13
     # return an error if structure of body is incorrect => rules is empty
-    res_err = null
     req.body = {
         id: 0,
         shareID: 1,
@@ -634,15 +418,13 @@ test 'Testing `handleRecipientAnswer` module', (assert) ->
     }
 
     sharing.handleRecipientAnswer req, res, (_err) ->
-        res_err = _err
+        assert.deepEqual _err, err,
+            "handleRecipientAnswer: return error if req.body.rules is empty"
 
-    assert.deepEqual res_err, err,
-        "handleRecipientAnswer: return error is req.body.rules is empty"
 
     # -- TEST 14
     # return an error if structure of body is incorrect => rules[X].id is
     # missing
-    res_err = null
     req.body = {
         id: 0,
         shareID: 1,
@@ -653,34 +435,32 @@ test 'Testing `handleRecipientAnswer` module', (assert) ->
     }
 
     sharing.handleRecipientAnswer req, res, (_err) ->
-        res_err = _err
+        assert.deepEqual _err, err,
+            "handleRecipientAnswer: return error if req.body.rules[X].id is
+            missing"
 
-    assert.deepEqual res_err, err,
-        "handleRecipientAnswer: return error is req.body.rules[X].id is missing"
 
     # -- TEST 15
     # return an error if structure of body is incorrect => rules[X].id is
     # empty
-    res_err = null
     req.body = {
         id: 0,
         shareID: 1,
         accepted: true,
         url: 'foo@bar.baz',
-        rules: [{id: 2, docType: 'event'}, {id: '', docType: 'event'}], # id: 3,
+        rules: [{id: 2, docType: 'event'}, {id: '', docType: 'event'}], #id: 3,
         hostUrl: 'me@localhost.me'
     }
 
     sharing.handleRecipientAnswer req, res, (_err) ->
-        res_err = _err
+        assert.deepEqual _err, err,
+            "handleRecipientAnswer: return error if req.body.rules[X].id is
+            empty"
 
-    assert.deepEqual res_err, err,
-        "handleRecipientAnswer: return error is req.body.rules[X].id is empty"
 
     # -- TEST 16
     # return an error if structure of body is incorrect => rules[X].docType is
     # missing
-    res_err = null
     req.body = {
         id: 0,
         shareID: 1,
@@ -691,15 +471,14 @@ test 'Testing `handleRecipientAnswer` module', (assert) ->
     }
 
     sharing.handleRecipientAnswer req, res, (_err) ->
-        res_err = _err
+        assert.deepEqual _err, err,
+            "handleRecipientAnswer: return error if req.body.rules[X].docType
+            is missing"
 
-    assert.deepEqual res_err, err,
-        "handleRecipientAnswer: return error is req.body.rules[X].docType is missing"
 
     # -- TEST 17
     # return an error if structure of body is incorrect => rules[X].docType is
     # empty
-    res_err = null
     req.body = {
         id: 0,
         shareID: 1,
@@ -710,45 +489,259 @@ test 'Testing `handleRecipientAnswer` module', (assert) ->
     }
 
     sharing.handleRecipientAnswer req, res, (_err) ->
-        res_err = _err
+        assert.deepEqual _err, err,
+            "handleRecipientAnswer: return error if req.body.rules[X].docType
+            is empty"
 
-    assert.deepEqual res_err, err,
-        "handleRecipientAnswer: return error is req.body.rules[X].docType is empty"
+    assert.end()
 
-    # -- TEST 18
-    # no error is returned if req.body has the correct structure
-    res_err = null
+
+test 'Testing `validateTarget` module', (assert) ->
+
+    # -- TEST 1
+    # an error is returned if req.body is missing
+    err = new Error "Bad request"
+    err.status = 400
+    req = {}
+    sharing.validateTarget req, res, (_err) ->
+        assert.deepEqual _err, err,
+            "validateTarget: an error is returned if req.body is missing"
+
+    # -- TEST 2
+    # an error is returned if shareID is missing
     req.body = {
-        id: 0,
-        shareID: 1,
+        #shareID: 1,
+        hostUrl: 'foo@bar.baz',
         accepted: true,
-        url: 'foo@bar.baz',
-        rules: [{id: 2, docType: 'event'}, {id: 3, docType: 'event'}],
-        hostUrl: 'me@localhost.me'
+        preToken: "preToken",
+        token: "thisIsATokenForTheAuthenticationProcess"
     }
 
-    sharing.handleRecipientAnswer req, res, (_err) ->
-        res_err = _err
+    sharing.validateTarget req, res, (_err) ->
+        assert.deepEqual _err, err,
+            "validateTarget: an error is returned if req.body.shareID is
+            missing"
 
-    assert.error res_err,
-        "handleRecipientAnswer: no error is returned if req.body is ok"
-
-    # -- TEST 19
-    # an access is created if req.body.accepted is set to true
-    res_err = null
+    # -- TEST 3
+    # an error is returned if shareID is empty
     req.body = {
-        id: 0,
-        shareID: 1,
+        shareID: '', #1,
+        hostUrl: 'foo@bar.baz',
         accepted: true,
-        url: 'foo@bar.baz',
-        rules: [{id: 2, docType: 'event'}, {id: 3, docType: 'event'}],
-        hostUrl: 'me@localhost.me'
+        preToken: "preToken",
+        token: "thisIsATokenForTheAuthenticationProcess"
     }
 
-    sharing.handleRecipientAnswer req, res, (_err) ->
-        res_err = _err
+    sharing.validateTarget req, res, (_err) ->
+        assert.deepEqual _err, err,
+            "validateTarget: an error is returned if req.body.shareID is
+            empty"
 
-    assert.ok accessAdded,
-        "handleRecipientAnswer: an access is generated if req.body.accepted is true"
+    # -- TEST 4
+    # an error is returned if hostUrl is missing
+    req.body = {
+        shareID: 1,
+        #hostUrl: 'foo@bar.baz',
+        accepted: true,
+        preToken: "preToken",
+        token: "thisIsATokenForTheAuthenticationProcess"
+    }
+
+    sharing.validateTarget req, res, (_err) ->
+        assert.deepEqual _err, err,
+            "validateTarget: an error is returned if req.body.hostUrl is
+            missing"
+
+    # -- TEST 5
+    # an error is returned if hostUrl is empty
+    req.body = {
+        shareID: 1,
+        hostUrl: '', #'foo@bar.baz',
+        accepted: true,
+        preToken: "preToken",
+        token: "thisIsATokenForTheAuthenticationProcess"
+    }
+
+    sharing.validateTarget req, res, (_err) ->
+        assert.deepEqual _err, err,
+            "validateTarget: an error is returned if req.body.hostUrl is
+            empty"
+
+    # -- TEST 6
+    # an error is returned if accepted is missing
+    req.body = {
+        shareID: 1,
+        hostUrl: 'foo@bar.baz',
+        #accepted: true,
+        preToken: "preToken",
+        token: "thisIsATokenForTheAuthenticationProcess"
+    }
+
+    sharing.validateTarget req, res, (_err) ->
+        assert.deepEqual _err, err,
+            "validateTarget: an error is returned if req.body.accepted is
+            missing"
+
+    # -- TEST 7
+    # an error is returned if accepted is empty
+    req.body = {
+        shareID: 1,
+        hostUrl: 'foo@bar.baz',
+        accepted: '',#true,
+        preToken: "preToken",
+        token: "thisIsATokenForTheAuthenticationProcess"
+    }
+
+    sharing.validateTarget req, res, (_err) ->
+        assert.deepEqual _err, err,
+            "validateTarget: an error is returned if req.body.accepted is
+            empty"
+
+    # -- TEST 8
+    # an error is returned if preToken is missing
+    req.body = {
+        shareID: 1,
+        hostUrl: 'foo@bar.baz',
+        accepted: true,
+        #preToken: "preToken",
+        token: "thisIsATokenForTheAuthenticationProcess"
+    }
+
+    sharing.validateTarget req, res, (_err) ->
+        assert.deepEqual _err, err,
+            "validateTarget: an error is returned if req.body.preToken is
+            missing"
+
+    # -- TEST 9
+    # an error is returned if preToken is empty
+    req.body = {
+        shareID: 1,
+        hostUrl: 'foo@bar.baz',
+        accepted: true,
+        preToken: '', #"preToken",
+        token: "thisIsATokenForTheAuthenticationProcess"
+    }
+
+    sharing.validateTarget req, res, (_err) ->
+        assert.deepEqual _err, err,
+            "validateTarget: an error is returned if req.body.preToken is
+            empty"
+
+    # -- TEST 10
+    # an error is returned if hostUrl isn't in the targets of share document
+    req.body = {
+        shareID: 1,
+        hostUrl: 'foo@bar.baz',
+        accepted: true,
+        preToken: 'preToken',
+        token: "thisIsATokenForTheAuthenticationProcess"
+    }
+
+    # Modifying dbStub for the test
+    dbStub.get = (id, callback) ->
+        doc =
+            targets: [{url: 'random@mail.com', preToken: 'preToken'}]
+
+        callback null, doc
+
+    err = new Error "random@mail.com not found for this sharing"
+    err.status = 404
+
+    sharing.validateTarget req, res, (_err) ->
+        assert.deepEqual _err, err,
+            "validateTarget: an error is returned if hostUrl isn't in the
+            targets of share document"
+
+    # -- TEST 11
+    # an error is returned if the preToken of the target and of the req.body
+    # don't match
+    dbStub.get = (id, callback) ->
+        doc =
+            targets: [{url: 'foo@bar.baz', preToken: 'surprise!'}]
+
+        callback null, doc
+
+    err = new Error "Unauthorized"
+    err.status = 401
+
+    sharing.validateTarget req, res, (_err) ->
+        assert.deepEqual _err, err,
+            "validateTarget: an error is returned if the preToken of the target
+            and of the req.body don't match"
+
+    # -- TEST 12
+    # an error is returned if the token is already set for the target
+    dbStub.get = (id, callback) ->
+        doc =
+            rules: [{id: 1, docType: 'event'}],
+            targets: [{url: 'foo@bar.baz', preToken: 'preToken', token: 'set'}]
+
+        callback null, doc
+
+    err = new Error "The answer for this sharing has already been given"
+    err.status = 403
+
+    sharing.validateTarget req, res, (_err) ->
+        assert.deepEqual _err, err,
+            "validateTarget: an error is returned if the token is already set
+            for the target"
+
+    # -- TEST 13
+    # preToken is deleted if target has accepted the request
+    docDbStubMerge = {}
+    preTokenDeleted = true
+
+    dbStub.get = (id, callback) ->
+        doc =
+            rules: [{id: 1, docType: 'event'}],
+            targets: [{url: 'foo@bar.baz', preToken: 'preToken'}]
+
+        callback null, doc
+
+    dbStub.merge = (repID, doc, callback) ->
+        docDbStubMerge = doc # we get the document passed
+        callback null
+
+    sharing.validateTarget req, res, (_err) ->
+        # we check that for each target the preToken is deleted
+        for target in docDbStubMerge.targets
+            if target.preToken?
+                preTokenDeleted = false
+
+        assert.ok preTokenDeleted,
+            "validateTarget: preToken is deleted if target has accepted the
+            request"
+
+        # -- TEST 14
+        # no error is returned if req.body is ok & accepted is true
+        assert.error _err,
+            "validateTarget: no error is returned if req.body is ok and
+            accepted is true"
+
+    # -- TEST 15
+    # target is removed from share document if request was denied
+    targetDeleted = true
+    req.body = {
+        shareID: 1,
+        hostUrl: 'foo@bar.baz',
+        accepted: false,
+        preToken: 'preToken',
+        token: "thisIsATokenForTheAuthenticationProcess"
+    }
+
+    sharing.validateTarget req, res, (_err) ->
+        for target in docDbStubMerge.targets
+            if target.url is req.body.hostUrl
+                targetDeleted = false
+
+        assert.ok targetDeleted,
+            "validateTarget: target is removed from share document if request
+            was denied"
+
+        # -- TEST 16
+        # no error is returned if req.body is ok and accepted is false
+        assert.error _err,
+            "validateTarget: no error is returned if req.body is ok and
+            accepted is false"
 
     assert.end()
