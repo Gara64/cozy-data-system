@@ -33,6 +33,14 @@ checkToken = module.exports.checkToken = (auth) ->
     else
         return [null, false, null]
 
+# Utility function to check if a rule is inside a set of rules.
+# A rule has the following structure:
+# rule = {id: 'someId', docType: 'someDocType'}
+isRuleIn = (set_rules, rule) ->
+
+    grant = r for r in set_rules when r.id is rule.id and r.docType is rule.docType
+    return grant.length > 0
+
 
 ## function checkDocType (docType, app, callback)
 ## @docType {String} document's docType that application want manage
@@ -64,21 +72,8 @@ module.exports.checkDocType = (auth, docType, callback) ->
         callback null, name, true
 
 
-# Utility function to check if a rule is inside a set of rules.
-# A rule has the following structure:
-# rule = {id: 'someId', docType: 'someDocType'}
-isRuleIn = (set_rules, rule) ->
-    # check if `set_rules` is an array
-    if set_rules.length?
-        for _rule in set_rules
-            if rule.id is _rule.id
-                if rule.docType is _rule.docType
-                    return true
 
-        return false
-    else
-        # `set_rules` is a single element
-        return set_rules.id is rule.id and set_rules.docType is rule.docType
+
 
 # XXX WIP - to double-check
 #
@@ -87,31 +82,32 @@ isRuleIn = (set_rules, rule) ->
 ## @rule {Object} the rule matching a unique document
 ## @callback {function} continuation
 ## Check if an application can manage the document matching the rule
-module.exports.checkDocRule = (auth, rule, callback) ->
+module.exports.checkSharingRule = (auth, rule, callback) ->
 
     if productionOrTest
-        # Check if app is authenticated
+        # Check if requester is authenticated
         [err, isAuthenticated, name] = checkToken auth
 
         if isAuthenticated
-            if rule?
-                if isRuleIn sharing[name], rule
-                    # rule is in: okay!
-                    callback null, name, true
-                else
-                    # rule is missing: no way in!
-                    callback null, name, false
+            if rule?.id? && rule?.docType?
+                rule.docType = rule.docType.toLowerCase()
+                # Check all the sharing rules defined for this login
+                for r in sharing[name]
+                    if r.id is rule.id && r.docType is rule.docType
+                        # Request is granted
+                        return callback null, name, true
+                callback null, name, false
 
             else
-                # no rule? no way in!
+                # Request is not authorized
                 callback null, name, false
         else
-            # app is not authenticated: no way in!
+            # Requester is not authenticated: no way in!
             callback null, false, false
 
     else
         [err, isAuthenticated, name] = checkToken auth
-        name ?= 'unknow sharing'
+        name ?= 'unknown sharing'
         callback null, name, true
 
 
