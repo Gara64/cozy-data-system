@@ -7,7 +7,6 @@ async = require 'async'
 permissionsManager = require './token'
 thumb = require('./thumb')
 initTokens = require('./token').init
-sharing = require('./sharing')
 
 
 defaultPermissions =
@@ -127,8 +126,3 @@ exports.removeDocWithoutDocType = (callback) ->
                     log.error err if err
                     cb()
             , callback
-
-
-exports.addSharingRules = (callback) ->
-    sharing.initRules (err) ->
-        if err then callback err else callback()

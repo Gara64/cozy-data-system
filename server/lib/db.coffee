@@ -145,4 +145,3 @@ module.exports = (callback) ->
             initTokens (tokens, permissions) ->
                 callback?()
 
-

@@ -1,7 +1,6 @@
 db = require('../helpers/db_connect_helper').db_connect()
 thumb = require '../lib/thumb'
 querystring = require 'querystring'
-sharing = require './sharing'
 log = require('printit')
     prefix: 'binary'
 

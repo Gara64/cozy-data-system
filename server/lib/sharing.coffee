@@ -39,8 +39,6 @@ module.exports.notifyTarget = (path, params, callback) ->
     # Get the domain if not already set
     checkDomain params, (err, params) ->
 
-        log.info "Send notification to : " +  params.url
-
         remote = request.createClient params.url
         remote.post path, params, (err, result, body) ->
             if err?
@@ -79,7 +77,7 @@ module.exports.replicateDocs = (params, callback) ->
             continuous: params.continuous or false
             doc_ids: params.docIDs
 
-        log.info  "Replicate " + JSON.stringify docIDs + " to " + url
+        log.info  "Replicate " + JSON.stringify params.docIDs + " to " + url
 
         db.replicate replication.target, replication, (err, body) ->
             if err? then callback err
