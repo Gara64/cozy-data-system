@@ -1,5 +1,6 @@
 Sharing = require '../lib/sharing'
 async = require "async"
+_ = require "lodash"
 crypto = require "crypto"
 log = require('printit')
     prefix: 'sharing'
@@ -45,7 +46,7 @@ module.exports.create = (req, res, next) ->
     share = req.body
 
     # Check that the body isn't empty
-    unless share?
+    unless share? and not _.isEmpty(share)
         err = new Error "Bad request: no body"
         err.status = 400
         return next err
@@ -128,30 +129,7 @@ module.exports.delete = (req, res, next) ->
 #                 and a preToken
 module.exports.sendSharingRequests = (req, res, next) ->
 
-    if not req.share?
-        err = new Error "Bad request"
-        err.status = 400
-        return next err
-
     share = req.share
-
-    # Check share object structure: first is the presence of a shareID
-    if not share.shareID? or share.shareID is ""
-        err = new Error "No shareID provided"
-        err.status = 400
-        return next err
-    # then come the targets
-    if not share.targets?
-        err = new Error "No target provided"
-        err.status = 400
-        return next err
-    # and its structure: we need an url and a preToken for each of them
-    for target in share.targets
-        if not target.url? or target.url is "" or not target.preToken? or
-                target.preToken is ""
-            err = new Error "Incorrect target structure detected"
-            err.status = 400
-            return next err
 
     # Notify each target
     async.each share.targets, (target, callback) ->

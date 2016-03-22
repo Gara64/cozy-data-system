@@ -28,7 +28,8 @@
     "request-json": "0.5.5",
     "string": "1.8.0",
     "through": "2.3.7",
-    "async": "1.5.2"
+    "async": "1.5.2",
+    "lodash": "~4.6.1"
   },
   "devDependencies": {
     "chai": "1.9.0",
@@ -38,13 +39,11 @@
     "coffeelint": "1.13.0",
     "mocha": "1.17.1",
     "should": "3.1.2",
-    "faucet": "0.0.1",
-    "coffeetape": "~1.0.1"
+    "sinon": "~1.17.3"
   },
   "main": "server.coffee",
   "scripts": {
     "test": "cake --use-js tests",
-    "sharing-test": "coffeetape tests/controllers_sharing.coffee | faucet",
     "start": "node build/server.js",
     "build": "cake build",
     "lint": "npm run lint1 && npm run lint2",
