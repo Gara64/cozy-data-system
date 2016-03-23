@@ -2,6 +2,7 @@ Sharing = require '../lib/sharing'
 async = require "async"
 _ = require "lodash"
 crypto = require "crypto"
+util = require 'util'
 log = require('printit')
     prefix: 'sharing'
 
@@ -95,14 +96,14 @@ module.exports.create = (req, res, next) ->
 
 # Delete an existing sharing, identified by its id
 module.exports.delete = (req, res, next) ->
-    shareID = req.params.id
-
     # check if the information is available
-    if not shareID?
+    if not req.params?.id?
         err = new Error "Bad request"
         err.status = 400
         next err
     else
+        shareID = req.params.id
+
         # Get all the targets in the sharing document
         db.get shareID, (err, doc) ->
             if err?

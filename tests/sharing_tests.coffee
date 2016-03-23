@@ -215,3 +215,53 @@ describe "Sharing controller tests:", ->
             sharing.sendSharingRequests req, res, (err) ->
                 err.should.equal "Error"
                 done()
+
+
+    describe 'delete module', ->
+
+        # We declare a phony document that we'll return when needed
+        doc = targets: [{url: 'url1.com', preToken: 'token1'}]
+        # fake request to mimick call `client.del "services/sharing/103"`
+        req = params: { id: 103 }
+
+        # stubs of get/remove methods of database
+        getStub = (id, callback) -> callback null, doc
+        removeStub = (id, callback) -> callback null, true
+        dbGetStub    = {}
+        dbRemoveStub = {}
+
+        # The use of `(before|after)Each` instead of `(before|after)` might not
+        # be efficient but if we want a clean stub before every test...
+        beforeEach (done) ->
+            dbGetStub    = sinon.stub db, "get", getStub
+            dbRemoveStub = sinon.stub db, "remove", removeStub
+            done()
+
+        afterEach (done) ->
+            dbRemoveStub.restore()
+            dbGetStub.restore()
+            done()
+
+
+        it 'should return an error if the document does not exist in the db',
+        (done) ->
+            dbGetStub.restore() # we want the correct behavior, not the stub
+            client.del "services/sharing/103", (err, res, body) ->
+                res.statusCode.should.equal 404
+                # Funny thing: the message CouchDB sends us to inform us about
+                # an error is "stringified" twice hence the following check.
+                res.body.should.equal '{"error":"not_found: missing"}'
+                done()
+
+
+        it 'should remove the document from the database', (done) ->
+            sharing.delete req, {}, ->
+                dbRemoveStub.callCount.should.equal 1
+                done()
+
+        it 'should transmit the targets to the next callback', (done) ->
+            sharing.delete req, {}, ->
+                should.exist req.share
+                should.exist req.share.targets
+                req.share.targets.should.be.deep.equal doc.targets
+                done()
