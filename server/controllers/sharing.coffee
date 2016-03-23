@@ -435,18 +435,13 @@ module.exports.replicate = (req, res, next) ->
 module.exports.stopReplications = (req, res, next) ->
     share = req.share
 
-    if not share?
-        err = new Error "Bad request"
-        err.status = 400
+    # Cancel the replication for all the targets
+    async.each share.targets, (target, cb) ->
+        if target.repID?
+            Sharing.cancelReplication target.repID, (err) ->
+                cb err
+        else
+            cb()
+    , (err) ->
         next err
-    else
-        # Cancel the replication for all the targets
-        async.each share.targets, (target, cb) ->
-            if target.repID?
-                Sharing.cancelReplication target.repID, (err) ->
-                    cb err
-            else
-                cb()
-        , (err) ->
-            next err
 

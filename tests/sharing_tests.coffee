@@ -259,9 +259,58 @@ describe "Sharing controller tests:", ->
                 dbRemoveStub.callCount.should.equal 1
                 done()
 
-        it 'should transmit the targets to the next callback', (done) ->
+        it 'should transmit the targets and the shareID to the next callback',
+        (done) ->
             sharing.delete req, {}, ->
                 should.exist req.share
                 should.exist req.share.targets
+                should.exist req.share.shareID
+                req.share.shareID.should.equal req.params.id
                 req.share.targets.should.be.deep.equal doc.targets
+                done()
+
+
+    describe 'stopReplications module', ->
+
+        # Phony document
+        doc = targets: [{url: 'url1.com', preToken: 'token1'},\
+                        {url: 'url2.com', preToken: 'token2', repID: 2},
+                        {url: 'url3.com', preToken: 'token3', repID: 3},
+                        {url: 'url4.com', preToken: 'token4', repID: 4},
+                        {url: 'url5.com', preToken: 'token5'}]
+        # req to mimick result of preceeding call
+        req = share:
+            shareID: 103
+            targets: doc.targets
+
+        # Stub of Sharing.cancelReplication (lib/sharing.coffee)
+        cancelReplicationFn          = (id, callback) -> callback null
+        sharingCancelReplicationStub = {}
+
+        before (done) ->
+            sharingCancelReplicationStub   = sinon.stub Sharing, \
+                "cancelReplication", cancelReplicationFn
+            done()
+
+        after (done) ->
+            sharingCancelReplicationStub.restore()
+            done()
+
+        it 'should cancel the replication for all targets that have a
+        replication id', (done) ->
+            sharing.stopReplications req, {}, ->
+                sharingCancelReplicationStub.callCount.should.equal 3
+                done()
+
+        it 'should throw an error if a replication could not be cancelled',
+        (done) ->
+            sharingCancelReplicationStub.restore() # cancel previous stub
+            # create "new" stub that produces an error
+            cancelReplicationFn = (id, callback) -> callback "Error"
+            sharingCancelReplicationStub = sinon.stub Sharing, \
+                "cancelReplication", cancelReplicationFn
+
+            sharing.stopReplications req, {}, (err) ->
+                should.exist err
+                err.should.equal "Error"
                 done()
