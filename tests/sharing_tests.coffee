@@ -1,5 +1,4 @@
 should = require('chai').Should()
-expect = require('chai').expect
 helpers = require('./helpers')
 sinon = require 'sinon'
 _ = require 'lodash'
@@ -104,6 +103,17 @@ describe "Sharing controller tests:", ->
 
     describe 'sendSharingRequests module', ->
 
+        # Correct sharing structure normally obtained as a result of `create`
+        share =
+            desc: 'description'
+            docType: 'sharing'
+            shareID: '1aqwzsx'
+            rules: [ {id: 1, docType: 'event'}, {id: 2, docType: 'Tasky'} ]
+            targets: [{url: 'url1.com', preToken: 'preToken1'}, \
+                {url: 'url2.com', preToken: 'preToken2'}, \
+                {url: 'url3.com', preToken: 'preToken3'}]
+            continuous: true
+
         # Spies on the parameters given to the `notifyTarget` module
         spyRoute = {}
         spyRequest = {}
@@ -114,19 +124,16 @@ describe "Sharing controller tests:", ->
             spyRoute = route
             spyRequest = request
             callback null # to mimick success
+        notifyStub = {}
 
-        notifyStub = sinon.stub Sharing, "notifyTarget", stubFn
+        beforeEach (done) ->
+            notifyStub = sinon.stub Sharing, "notifyTarget", stubFn
+            done()
 
-        # Correct sharing structure normally obtained as a result of `create`
-        share =
-            desc: 'description'
-            docType: 'sharing'
-            shareID: '1aqwzsx'
-            rules: [ {id: 1, docType: 'event'}, {id: 2, docType: 'Tasky'} ]
-            targets: [{url: 'url1.com', preToken: 'token1'}, \
-                {url: 'url2.com', preToken: 'token2'}, \
-                {url: 'url3.com', preToken: 'token3'}]
-            continuous: true
+        afterEach (done) ->
+            notifyStub.restore()
+            done()
+
 
         it 'should send a request to all targets', (done) ->
             req = share: _.clone share
@@ -167,7 +174,7 @@ describe "Sharing controller tests:", ->
                         # third target
                         should.exist(spyRequest)
                         spyRequest.url.should.equal 'url3.com'
-                        spyRequest.preToken.should.equal 'token3'
+                        spyRequest.preToken.should.equal 'preToken3'
                         spyRequest.shareID.should.equal req.share.shareID
                         spyRequest.rules.should.deep.equal req.share.rules
                         spyRequest.desc.should.equal req.share.desc
@@ -180,7 +187,7 @@ describe "Sharing controller tests:", ->
         it 'should send the requests on services/sharing/request', (done) ->
             req = share: _.clone share
             # we only let one target: spyRoute is set with it
-            req.share.targets = [{url: 'url1.com', preToken: 'token1'}]
+            req.share.targets = [{url: 'url1.com', preToken: 'preToken1'}]
 
             # XXX Once again it kinda is ugly...
             # stub `res.status(200).send success:true` call
@@ -201,11 +208,9 @@ describe "Sharing controller tests:", ->
         it 'should return an error if notifyTarget failed', (done) ->
             # remove previously defined stub...
             notifyStub.restore()
-
             # ... and generate a new one that mimicks failure
             stubFn = (route, request, callback) ->
                 callback "Error" # to mimick failure we return something
-
             notifyStub = sinon.stub Sharing, "notifyTarget", stubFn
 
             # We want a correct structure
@@ -220,7 +225,7 @@ describe "Sharing controller tests:", ->
     describe 'delete module', ->
 
         # We declare a phony document that we'll return when needed
-        doc = targets: [{url: 'url1.com', preToken: 'token1'}]
+        doc = targets: [{url: 'url1.com', preToken: 'preToken1'}]
         # fake request to mimick call `client.del "services/sharing/103"`
         req = params: { id: 103 }
 
@@ -273,11 +278,11 @@ describe "Sharing controller tests:", ->
     describe 'stopReplications module', ->
 
         # Phony document
-        doc = targets: [{url: 'url1.com', preToken: 'token1'},\
-                        {url: 'url2.com', preToken: 'token2', repID: 2},
-                        {url: 'url3.com', preToken: 'token3', repID: 3},
-                        {url: 'url4.com', preToken: 'token4', repID: 4},
-                        {url: 'url5.com', preToken: 'token5'}]
+        doc = targets: [{url: 'url1.com', preToken: 'preToken1'},\
+                        {url: 'url2.com', preToken: 'preToken2', repID: 2},
+                        {url: 'url3.com', preToken: 'preToken3', repID: 3},
+                        {url: 'url4.com', preToken: 'preToken4', repID: 4},
+                        {url: 'url5.com', preToken: 'preToken5'}]
         # req to mimick result of preceeding call
         req = share:
             shareID: 103
@@ -311,6 +316,91 @@ describe "Sharing controller tests:", ->
                 "cancelReplication", cancelReplicationFn
 
             sharing.stopReplications req, {}, (err) ->
+                should.exist err
+                err.should.equal "Error"
+                done()
+
+
+    describe 'sendDeleteNotifications module', ->
+
+        # Phony document
+        targets =
+            [{url: 'url1.com', preToken:'preToken1'},
+             {url: 'url2.com', preToken:'preToken2', token:'token2', repID: 2},
+             {url: 'url3.com', preToken:'preToken3'},
+             {url: 'url4.com', preToken:'preToken4', token:'token4', repID: 4},
+             {url: 'url5.com', preToken:'preToken5'}]
+        urls = (target.url for target in targets)     # extract urls
+        tokens = (target.token for target in targets) # extract tokens and pre
+        tokens = tokens.concat (target.preToken for target in targets)
+        # req to mimick result of preceeding calls
+        req = share:
+            shareID: 103
+            targets: targets
+
+        # sharing.notifyTarget stub (lib/sharing.coffee).
+        # Returning `null` mimicks success.
+        notifyTargetFn   = (route, notification, callback) -> callback null
+        notifyTargetStub = {}
+
+        beforeEach (done) ->
+            notifyTargetStub = sinon.stub Sharing, "notifyTarget",
+                notifyTargetFn
+            done()
+
+        afterEach (done) ->
+            notifyTargetStub.restore()
+            done()
+
+        it 'should define the notifications correctly and call the route
+        "services/sharing/cancel"', (done) ->
+            notifyTargetStub.restore() # cancel stub
+            # change to a custom stub that tests the values passed
+            testNotifyTargetFn = (route, notification, callback) ->
+                route.should.equal "services/sharing/cancel"
+                urls.should.contain notification.url
+                should.exist notification.token
+                tokens.should.contain notification.token
+                notification.shareID.should.equal req.share.shareID
+                notification.desc.should.equal "The sharing
+                    #{req.share.shareID} has been deleted"
+                callback null
+
+            notifyTargetStub = sinon.stub Sharing, "notifyTarget",
+                testNotifyTargetFn
+
+            # mimick Express `res.send`
+            resStub =
+                status: (_) ->
+                    send: (_) ->
+                        done()
+
+            # and finally call the test
+            sharing.sendDeleteNotifications req, resStub, ->
+                done()
+
+        it 'should send notifications to all targets that have a token and a
+        repID', (done) ->
+            # mimick Express `res.send`
+            resStub =
+                status: (_) ->
+                    send: (_) ->
+                        notifyTargetStub.callCount.should.equal targets.length
+                        done()
+
+            # and finally call the test
+            sharing.sendDeleteNotifications req, resStub, ->
+                done()
+
+        it 'should return an error if a notification could not be sent',
+        (done) ->
+            notifyTargetStub.restore() # cancel stub
+            errNotifyTargetFn = (route, notification, callback) ->
+                callback "Error"
+            notifyTargetStub = sinon.stub Sharing, "notifyTarget",
+                errNotifyTargetFn
+
+            sharing.sendDeleteNotifications req, {}, (err) ->
                 should.exist err
                 err.should.equal "Error"
                 done()

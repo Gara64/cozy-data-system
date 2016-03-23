@@ -163,29 +163,24 @@ module.exports.sendSharingRequests = (req, res, next) ->
 module.exports.sendDeleteNotifications = (req, res, next) ->
     share = req.share
 
-    if not req.share?
-        err = new Error "Bad request"
-        err.status = 400
-        next err
-    else
-        # Notify each target
-        async.each share.targets, (target, callback) ->
-            notif =
-                url: target.url
-                token: target.token
-                shareID: share.shareID
-                desc: "The sharing #{share.shareID} has been deleted"
+    # Notify each target
+    async.each share.targets, (target, callback) ->
+        notif =
+            url: target.url
+            token: if target.token? then target.token else target.preToken
+            shareID: share.shareID
+            desc: "The sharing #{share.shareID} has been deleted"
 
-            log.info "Send sharing cancel notification to : #{notif.url}"
+        log.info "Send sharing cancel notification to : #{notif.url}"
 
-            Sharing.notifyTarget "services/sharing/cancel", notif,
-                    (err, result) ->
-                callback err
-        , (err) ->
-            if err?
-                next err
-            else
-                res.status(200).send success: true
+        Sharing.notifyTarget "services/sharing/cancel", notif,
+        (err, result) ->
+            callback err
+    , (err) ->
+        if err?
+            next err
+        else
+            res.status(200).send success: true
 
 
 # Create access if the sharing answer is yes, remove the Sharing doc otherwise.
