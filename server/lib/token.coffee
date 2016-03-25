@@ -4,54 +4,45 @@ log = require('printit')
     prefix: 'token'
 permissions = {}
 tokens = {}
-# Array of objects containing the rules describing which files can be accessed
-# by which application.
-# A rule is: {id: 'someId', docType: 'someDocType'}
-# For a given app its set of rules can be retrieved via: sharing[app]
-sharing = {}
+sharingTokens = {}
+sharingPermissions = {}
 
 productionOrTest = process.env.NODE_ENV in ['production', 'test']
 
 
 ## function checkToken (auth, tokens, callback)
 ## @auth {string} Field 'authorization' of request
-## @tokens {tab} Tab which contains applications and their tokens
+## @tokensTab {tab} Tab which contains applications and their tokens
 ## @callback {function} Continuation to pass control back to when complete.
 ## Check if application is well authenticated
-checkToken = module.exports.checkToken = (auth) ->
+checkToken = module.exports.checkToken = (auth, tokensTab) ->
     if auth isnt "undefined" and auth?
+        # Default case for tokens
+        unless tokensTab? then tokensTab = tokens
         # Recover username and password in field authorization
         auth = auth.substr(5, auth.length - 1)
         auth = new Buffer(auth, 'base64').toString('ascii')
         username = auth.split(':')[0]
         password = auth.split(':')[1]
         # Check if application is well authenticated
-        if password isnt undefined and tokens[username] is password
+        if password isnt undefined and tokensTab[username] is password
             return [null, true, username]
         else
             return [null, false, username]
     else
         return [null, false, null]
 
-# Utility function to check if a rule is inside a set of rules.
-# A rule has the following structure:
-# rule = {id: 'someId', docType: 'someDocType'}
-isRuleIn = (set_rules, rule) ->
-
-    grant = r for r in set_rules when r.id is rule.id and r.docType is rule.docType
-    return grant.length > 0
 
 
 ## function checkDocType (docType, app, callback)
 ## @docType {String} document's docType that application want manage
-## @name {String} application's name
 ## @callback {function} Continuation to pass control back to when complete.
 ## Check if application can manage docType
 module.exports.checkDocType = (auth, docType, callback) ->
     # Check if application is authenticated
 
     if productionOrTest
-        [err, isAuthenticated, name] = checkToken auth
+        [err, isAuthenticated, name] = checkToken auth, tokens
         if isAuthenticated
             if docType?
                 docType = docType.toLowerCase()
@@ -67,66 +58,25 @@ module.exports.checkDocType = (auth, docType, callback) ->
         else
             callback null, false, false
     else
-        [err, isAuthenticated, name] = checkToken auth
+        [err, isAuthenticated, name] = checkToken auth, tokens
         name ?= 'unknown'
-        callback null, name, true
-
-
-
-
-
-# XXX WIP - to double-check
-#
-## function checkDocRule (auth, rule, callback)
-## @auth {Object} the application means of authentication
-## @rule {Object} the rule matching a unique document
-## @callback {function} continuation
-## Check if an application can manage the document matching the rule
-module.exports.checkSharingRule = (auth, rule, callback) ->
-
-    if productionOrTest
-        # Check if requester is authenticated
-        [err, isAuthenticated, name] = checkToken auth
-
-        if isAuthenticated
-            if rule?.id? && rule?.docType?
-                rule.docType = rule.docType.toLowerCase()
-                # Check all the sharing rules defined for this login
-                for r in sharing[name]
-                    if r.id is rule.id && r.docType is rule.docType
-                        # Request is granted
-                        return callback null, name, true
-                callback null, name, false
-
-            else
-                # Request is not authorized
-                callback null, name, false
-        else
-            # Requester is not authenticated: no way in!
-            callback null, false, false
-
-    else
-        [err, isAuthenticated, name] = checkToken auth
-        name ?= 'unknown sharing'
         callback null, name, true
 
 
 ## function checkDocType (docType, app, callback)
 ## @docType {String} document's docType that application want manage
-## @name {String} application's name
-## @callback {function} Continuation to pass control back to when complete.
 ## Check if application can manage docType
-module.exports.checkDocTypeSync = (auth, docType, callback) ->
+module.exports.checkDocTypeSync = (auth, docType) ->
     # Check if application is authenticated
 
     if productionOrTest
-        [err, isAuthenticated, name] = checkToken auth
+        [err, isAuthenticated, name] = checkToken auth, tokens
         if isAuthenticated
             if docType?
                 docType = docType.toLowerCase()
                 # Check if application can manage docType
                 if permissions[name][docType]?
-                    callback null, name, true
+                    return [null, name, true]
                 else if permissions[name]["all"]?
                     return [null, name, true]
                 else
@@ -136,9 +86,72 @@ module.exports.checkDocTypeSync = (auth, docType, callback) ->
         else
             return [null, false, false]
     else
-        [err, isAuthenticated, name] = checkToken auth
+        [err, isAuthenticated, name] = checkToken auth, tokens
         name ?= 'unknown'
         return [null, name, true]
+
+
+## function checkSharingRule (auth, docInfo, callback)
+## @auth {string} Field 'authorization' of request
+## @docInfo {Object} Contains the permission informations
+## @callback {function} Continuation to pass control back to when complete.
+## Check if the sharing can manage the document
+module.exports.checkSharingRule = (auth, docInfo, callback) ->
+    if productionOrTest
+        # Check if requester is authenticated
+        [err, isAuthenticated, name] = checkToken auth, sharingTokens
+        if isAuthenticated
+            if docInfo?.id? && docInfo?.docType?
+                docInfo.docType = docInfo.docType.toLowerCase()
+                # Check all the sharing rules defined for this login
+                for rule in sharingPermissions[name]
+                    if rule.id is docInfo.id && rule.docType is docInfo.docType
+                        # Request is granted
+                        return callback null, name, true
+                # Request is denied
+                callback null, name, false
+            else
+                # Particular case for couchDB requests without id or docType
+                callback null, name, true
+        else
+            # Requester is not authenticated: no way in!
+            callback null, false, false
+    else
+        [err, isAuthenticated, name] = checkToken auth, sharingTokens
+        name ?= 'unknown sharing'
+        callback null, name, true
+
+
+
+## function checkSharingRuleSync (auth, rule, callback)
+## @auth {string} Field 'authorization' of request
+## @docInfo {Object} Contains the permission informations
+## Check if the sharing can manage the document
+module.exports.checkSharingRuleSync = (auth, docInfo) ->
+    if productionOrTest
+        # Check if requester is authenticated
+        [err, isAuthenticated, name] = checkToken auth, sharingTokens
+        if isAuthenticated
+            if docInfo?.id? && docInfo?.docType?
+                docInfo.docType = docInfo.docType.toLowerCase()
+                # Check all the sharing rules defined for this login
+                for rule in sharingPermissions[name]
+                    if rule.id is docInfo.id && rule.docType is docInfo.docType
+                        # Request is granted
+                        return [null, name, true]
+                # Request is denied
+                return [null, name, false]
+            else
+                # Particular case for couchDB requests without id or docType
+                return [null, name, true]
+        else
+            # Requester is not authenticated: no way in!
+            return [null, false, false]
+    else
+        [err, isAuthenticated, name] = checkToken auth, sharingTokens
+        name ?= 'unknown sharing'
+        return [null, name, true]
+
 
 ## function checkProxy (auth, callback)
 ## @auth {String} Field 'authorization' i request header
@@ -168,13 +181,12 @@ module.exports.checkProxyHome = (auth, callback) ->
         callback null, true
 
 
-# XXX WIP - to double-check
 ## function updatePermissons (access, callback)
 ## @access {Object} application:
 ##   * access.password is application token
 ##   * access.name is application name
-##   * access.permissions is application permissions
-##   * access.rules is a set of {id: 'docId', docType: 'docType'} rules for
+##   * access.permissions is application and device permissions
+##   * access.rules is a set of {id, docType} rules for sharing permissions
 ##     accessing documents.
 ## @callback {function} Continuation to pass control back to when complete.
 ## Update application permissions and token
@@ -182,16 +194,18 @@ updatePermissions = (access, callback) ->
     login = access.login
 
     if productionOrTest
-        if access.token?
-            tokens[login] = access.token
+        # Sharing context
+        if access.rules?
+            sharingTokens[login] = access.token if access.token?
+            for rule in access.rules
+                rule.docType = rule.docType.toLowerCase()
+            sharingPermissions[login] = access.rules
 
-        if access.permissions?
+        else if access.permissions?
+            tokens[login] = access.token if access.token?
             permissions[login] = {}
             for docType, description of access.permissions
                 permissions[login][docType.toLowerCase()] = description
-
-        if access.rules?
-            sharing[login] = access.rules
 
         callback() if callback?
 
@@ -199,15 +213,13 @@ updatePermissions = (access, callback) ->
         callback() if callback?
 
 
-# XXX WIP - to double-check
 ## function addAccess (doc, callback)
 ## @doc {Object} application/device:
 ##   * doc.password is application token
 ##   * doc.slug/doc.login is application name
-##   * doc.permissions is application permissions
+##   * doc.permissions is application and device permissions
 ##   * doc.id/doc._id is application id
-##   * doc.rules is a set of {'docId', 'docType'} rules for accessing
-##     documents.
+##   * doc.rules is a set of {id, docType} rules for sharing permissions
 ## @callback {function} Continuation to pass control back to when complete.
 ## Add access for application or device
 addAccess = module.exports.addAccess = (doc, callback) ->
@@ -219,9 +231,8 @@ addAccess = module.exports.addAccess = (doc, callback) ->
         token: doc.password
         app: doc.id or doc._id
 
-    # Safeguard: if we create an access that has sharing capabilities then its
-    # permissions must be empty so that it can only access documents based on
-    # the sharing "rules"
+    # Safeguard: if an access is granted for a sharing, then the permissions
+    # must be empty so that it can only access documents based on the rules
     if doc.rules?
         access.rules = doc.rules
     else
@@ -234,13 +245,12 @@ addAccess = module.exports.addAccess = (doc, callback) ->
             callback null, access if callback?
 
 
-# XXX WIP - to double-check
 ## function updateAccess (doc, callback)
 ## @id {String} access id for application
 ## @doc {Object} application/device:
 ##   * doc.password is new application token
 ##   * doc.slug/doc.login is new application name
-##   * doc.permissions is new application permissions
+##   * doc.permissions is new application or device permissions
 ##   * doc.rules is new set of sharing rules
 ## @callback {function} Continuation to pass control back to when complete.
 ## Update access for application or device
@@ -250,16 +260,16 @@ module.exports.updateAccess = (id, doc, callback) ->
             access = accesses[0].value
 
             # Delete old access
-            # XXX What happens if permissions[access.login] or
-            # sharing[access.login] does not exist? Because if one does then
-            # the other doesn't.
             delete permissions[access.login]
             delete tokens[access.login]
-            delete sharing[access.login]
+            delete sharingPermissions[access.login]
+            delete sharingTokens[access.login]
 
             # Create new access
             access.login = doc.slug or access.login
             access.token = doc.password or access.token
+            
+            # The rules are only for the sharing
             if doc.rules?
                 access.rules = doc.rules
             else
@@ -274,7 +284,6 @@ module.exports.updateAccess = (id, doc, callback) ->
             addAccess doc, callback
 
 
-# XXX WIP - to double-check
 ## function removeAccess (doc, callback)
 ## @doc {Object} access to remove
 ## @callback {function} Continuation to pass control back to when complete.
@@ -284,11 +293,12 @@ module.exports.removeAccess = (doc, callback) ->
         return callback err if err? and callback?
         if accesses.length > 0
             access = accesses[0].value
-            # XXX Same as the above function: what happens when we try to
-            # delete something that does not exist?
+
             delete permissions[access.login]
             delete tokens[access.login]
-            delete sharing[access.login]
+            delete sharingPermissions[access.login]
+            delete sharingTokens[access.login]
+
             db.remove access._id, access._rev, (err) ->
                 callback err if callback?
         else
@@ -345,14 +355,22 @@ initHomeProxy = (callback) ->
 ## Initialize tokens and permissions for all accesses (applications or devices)
 initAccess = (access, callback) ->
     name = access.login
-    tokens[name] = access.token
-    if access.permissions? and access.permissions isnt null
-        permissions[name] = {}
-        for docType, description of access.permissions
-            docType = docType.toLowerCase()
-            permissions[name][docType] = description
+
+    # Sharing context
     if access.rules?
-        sharing[name] = access.rules
+        sharingTokens[name] = access.token
+        for rule in access.rules
+            rule.docType = rule.docType.toLowerCase()
+        sharingPermissions[name] = access.rules
+    else
+        tokens[name] = access.token
+        if access.permissions? and access.permissions isnt null
+
+            permissions[name] = {}
+            for docType, description of access.permissions
+                docType = docType.toLowerCase()
+                permissions[name][docType] = description
+    
     callback null
 
 ## function init (callback)

@@ -1,5 +1,5 @@
 db = require('../helpers/db_connect_helper').db_connect()
-checkPermissions = require('../helpers/utils').checkPermissionsSync
+checkPermissions = require('../helpers/utils').checkReplicationPermissionsSync
 request = require 'request'
 url = require 'url'
 through = require 'through'
@@ -88,7 +88,8 @@ requestOptions = (req) ->
             bodyToTransmit = JSON.stringify req.body
             options['body'] = bodyToTransmit
             # Check doc : bodyToTransmit
-            err = checkPermissions req, bodyToTransmit.docType
+            docInfo = {id: bodyToTransmit._id, docType: bodyToTransmit.docType}
+            err = checkPermissions req, docInfo
             return [err, options]
     return [null, options]
 
@@ -132,9 +133,10 @@ module.exports.proxy = (req, res, next) ->
                         else
                             content = Buffer.concat(data).toString()
                             [err, doc] = retrieveJsonDocument content
-                        # Check document docType
+                        # Check document docType and id
                         if doc
-                            err = checkPermissions req, doc.docType
+                            docInfo = {id: doc._id, docType: doc.docType}
+                            err = checkPermissions req, docInfo
                             if err
                                 # Device isn't authorized
                                 res.status(403).send err
@@ -164,7 +166,8 @@ module.exports.proxy = (req, res, next) ->
             [err, doc] = retrieveJsonDocument Buffer.concat(data).toString()
             unless err
                 # Check doc
-                err = checkPermissions req, doc.docType
+                docInfo = {id: doc._id, docType: doc.docType}
+                err = checkPermissions req, docInfo
                 if err
                     # Device isn't authorized
                     res.status(403).send err

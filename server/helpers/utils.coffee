@@ -2,6 +2,8 @@ fs = require 'fs'
 feed = require '../lib/feed'
 checkDocType = require('../lib/token').checkDocType
 checkDocTypeSync = require('../lib/token').checkDocTypeSync
+checkSharingRule = require('../lib/token').checkSharingRule
+checkSharingRuleSync = require('../lib/token').checkSharingRuleSync
 
 # Delete files on the file system
 module.exports.deleteFiles = (files) ->
@@ -11,40 +13,8 @@ module.exports.deleteFiles = (files) ->
 # Check the application has the permissions to access the route
 module.exports.checkPermissions = (req, permission, next) ->
     authHeader = req.header('authorization')
+
     checkDocType authHeader, permission, (err, appName, isAuthorized) ->
-        # When false, the request is not authenticated
-        # A second check is performed for the sharing
-        if not appName
-            checkSharingRule authHeader, permission, (err, sharing, isAuthorized) ->
-                # Request not authenticated
-                if not sharing
-                    err = new Error "Requester is not authenticated"
-                    err.status = 401
-                    next err
-                # Request authenticated as a sharing but not authorized
-                else if not isAuthorized
-                    err = new Error "Requester is not authorized"
-                    err.status = 403
-                    next err
-                # Legitimate sharing request
-                else
-                    feed.publish 'usage.sharing', sharing
-                    req.sharing = sharing
-                    next()
-        else if not isAuthorized
-            err = new Error "Application is not authorized"
-            err.status = 403
-            next err
-        else
-            feed.publish 'usage.application', appName
-            req.appName = appName
-            next()
-
-
-# Check if the application has access to a specific document.
-module.exports.checkPermissionForRule = (req, permission, next) ->
-    authHeader = req.header('authorization')
-    checkSharingRule authHeader, permission, (err, appName, isAuthorized) ->
         if not appName
             err = new Error "Application is not authenticated"
             err.status = 401
@@ -54,22 +24,84 @@ module.exports.checkPermissionForRule = (req, permission, next) ->
             err.status = 403
             next err
         else
-            feed.publish 'sharing.application', appName
+            feed.publish 'usage.application', appName
             req.appName = appName
-            next
-
-module.exports.checkPermissionsSync = (req, permission) ->
+            next()
+            
+# Check the permissions for a couchDB replication
+# @permission {Object} : contains the permission linked to the request
+# Depending on the context, the permission can contains :
+#   * id       -> check the doc id is authorized
+#   * docType  -> check the document type is authorized
+#   * doc      -> [not implemented] Evaluate the doc against a sharing rule
+module.exports.checkReplicationPermissions = (req, permission, next) ->
     authHeader = req.header('authorization')
-    [err, appName, isAuthorized] = checkDocTypeSync authHeader, permission
-    if not appName
-        err = new Error "Application is not authenticated"
-        err.status = 401
-        return err
+
+    checkDocType authHeader, permission?.docType, (err, login, isAuthorized) ->
+        # Not authenticated
+        if not login
+            checkSharingRule authHeader, permission, (err, sharingName, isAuthorized) ->
+                # Request not authenticated
+                if not sharingName
+                    err = new Error "Requester is not authenticated"
+                    err.status = 401
+                    next err
+                # Request authenticated as a sharing but not authorized
+                else if not isAuthorized
+                    err = new Error "#{sharingName} is not authorized"
+                    err.status = 403
+                    next err
+                # Legitimate sharing request
+                else
+                    feed.publish 'usage.sharing', sharingName
+                    req.sharingName = sharingName
+                    next()
+        # Authentication successul but not authorized
+        else if not isAuthorized
+            err = new Error "Device #{login} is not authorized"
+            err.status = 403
+            next err
+        # Permissions are correct
+        else
+            feed.publish 'usage.application', login
+            req.login = login
+            next()
+
+# Check the permissions for a couchDB replication
+# @permission {Object} contains the permission linked to the request
+# Depending on the context, the permission can contains :
+#   * id       -> check the doc id is authorized
+#   * docType  -> check the document type is authorized
+#   * doc      -> [not implemented] Evaluate the doc against a sharing rule
+module.exports.checkReplicationPermissionsSync = (req, permission) ->
+    authHeader = req.header('authorization')
+
+    [err, login, isAuthorized] = checkDocTypeSync authHeader, permission?.docType
+    # Not authenticated
+    if not login
+        [err, sharing, isAuthorized] = checkSharingRuleSync authHeader, permission
+        # Request not authenticated
+        if not sharing
+            err = new Error "Requester is not authenticated"
+            err.status = 401
+            return err
+        # Request authenticated as a sharing but not authorized
+        else if not isAuthorized
+            err = new Error "#{sharing} is not authorized"
+            err.status = 403
+            next err
+        # Legitimate sharing request
+        else
+            feed.publish 'usage.sharing', sharing
+            req.sharing = sharing
+            return
+    # Authentication successul but not authorized
     else if not isAuthorized
-        err = new Error "Application is not authorized"
+        err = new Error "Device #{login} is not authorized"
         err.status = 403
         return err
+    # Permissions are correct
     else
-        feed.publish 'usage.application', appName
-        req.appName = appName
+        feed.publish 'usage.application', login
+        req.login = login
         return
