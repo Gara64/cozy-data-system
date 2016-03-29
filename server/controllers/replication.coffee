@@ -3,9 +3,6 @@ checkPermissions = require('../helpers/utils').checkReplicationPermissionsSync
 request = require 'request'
 url = require 'url'
 through = require 'through'
-log =  require('printit')
-    date: true
-    prefix: 'replication'
 
 getCredentialsHeader = ->
     username = db.connection.auth.username
@@ -97,7 +94,7 @@ requestOptions = (req) ->
 module.exports.proxy = (req, res, next) ->
     [err, options] = requestOptions req
     # Device isn't authorized if err
-    return res.status(403).send err if err?
+    return res.send 403, err if err?
 
     stream = through()
     couchReq  = request options
@@ -111,15 +108,8 @@ module.exports.proxy = (req, res, next) ->
             # Retrieve body
             data = []
             permissions = false
-            # Permissions already checked
-            if req.route.path is '/replication/:id([^_]*)/:name*'
-                permissions = true
             response.on 'data', (chunk) ->
-
-                # When replication are heartbeat it's send \n every 10 seconds
-                # so we don't want to have a processing
-                if req.method is 'GET' and \
-                        not (req.query.heartbeat and chunk.toString() is "\n")
+                if req.method is 'GET'
                     if permissions
                         res.write chunk
                     else
@@ -128,8 +118,6 @@ module.exports.proxy = (req, res, next) ->
                         if headers['Content-Type'] is 'application/json'
                             try
                                 doc = JSON.parse Buffer.concat(data)
-                            catch err
-                                log.info "Buffer isn't a JSON valid."
                         else
                             content = Buffer.concat(data).toString()
                             [err, doc] = retrieveJsonDocument content
@@ -139,7 +127,7 @@ module.exports.proxy = (req, res, next) ->
                             err = checkPermissions req, docInfo
                             if err
                                 # Device isn't authorized
-                                res.status(403).send err
+                                res.send 403, err
                                 couchReq.end()
                             else
                                 permissions = true
@@ -147,18 +135,19 @@ module.exports.proxy = (req, res, next) ->
                 else
                     res.write chunk
 
-            response.on 'end', ->
+            response.on 'end', ()->
                 res.end()
 
         .on 'error', (err) ->
-            return res.status(500).send err
+            console.log 'error'
+            return res.send 500, err
 
     stream.pipe couchReq
 
     # Receive body from device and transmit it on couchDB
     data = []
     permissions = false
-    req.on 'data', (chunk) ->
+    req.on 'data', (chunk) =>
         if permissions
             stream.emit 'data', chunk
         else
@@ -170,7 +159,7 @@ module.exports.proxy = (req, res, next) ->
                 err = checkPermissions req, docInfo
                 if err
                     # Device isn't authorized
-                    res.status(403).send err
+                    res.send 403, err
                     stream.emit 'end'
                     couchReq.end()
                     req.destroy()
@@ -178,5 +167,5 @@ module.exports.proxy = (req, res, next) ->
                     permissions = true
                     stream.emit 'data', Buffer.concat(data)
 
-    req.on 'end', ->
+    req.on 'end', () =>
         stream.emit 'end'
