@@ -7,6 +7,7 @@ _ = require 'lodash'
 db = require("#{helpers.prefix}server/helpers/db_connect_helper").db_connect()
 sharing = require "#{helpers.prefix}server/controllers/sharing"
 Sharing = require "#{helpers.prefix}server/lib/sharing"
+libToken = require "#{helpers.prefix}server/lib/token"
 
 
 client = helpers.getClient()
@@ -403,4 +404,272 @@ describe "Sharing controller tests:", ->
             sharing.sendDeleteNotifications req, {}, (err) ->
                 should.exist err
                 err.should.equal "Error"
+                done()
+
+
+    describe 'handleRecipientAnswer module', ->
+
+        # Correct answer structure expected
+        answer =
+            id: 'IdOfTheRecipientShareDocument'
+            shareID: 'IdOfTheSharerShareDocument'
+            accepted: true
+            preToken: 'preToken'
+            url: 'urlOfTheRecipient'
+            hostUrl: 'urlOfTheSharer'
+            rules: [{id: 1, docType: 'event'}, {id: 2, docType: 'event'}]
+
+        # We stub the addAccess module from lib/token.coffee: we return an
+        # error to avoid having our code run entirely if a test fails.
+        addAccessFn   = (access, callback) ->
+            callback new Error "Error"
+        addAccessStub = {}
+
+        # Same for the remove function
+        dbRemoveFn = (id, callback) ->
+            id.should.equal answer.id
+            callback new Error "db.remove"
+        dbRemoveStub = {}
+
+        before (done) ->
+            addAccessStub = sinon.stub libToken, "addAccess", addAccessFn
+            dbRemoveStub = sinon.stub db, "remove", dbRemoveFn
+            done()
+
+        after (done) ->
+            addAccessStub.restore()
+            dbRemoveStub.restore()
+            done()
+
+
+        it 'should return an error if the req structure is incorrect: body is
+        empty', (done) ->
+            data = {}
+            client.post 'services/sharing/sendAnswer/', data,
+            (err, res, body) ->
+                res.statusCode.should.equal 400
+                res.body.error.should.equal "Bad request: body is missing"
+                done()
+
+        it 'should return an error if the req structure is incorrect: id is
+        missing or empty', (done) ->
+            data = _.clone answer
+            data.id = undefined
+            client.post "services/sharing/sendAnswer/", data,
+            (err, res, body) ->
+                res.statusCode.should.equal 400
+                res.body.error.should.equal "Bad request: body is incomplete"
+                done()
+
+        it 'should return an error if the req structure is incorrect: shareID
+        is missing or empty', (done) ->
+            data = _.clone answer
+            data.shareID = null
+            client.post "services/sharing/sendAnswer/", data,
+            (err, res, body) ->
+                res.statusCode.should.equal 400
+                res.body.error.should.equal "Bad request: body is incomplete"
+                done()
+
+        it 'should return an error if the req structure is incorrect: accepted
+        is missing or empty', (done) ->
+            data = _.clone answer
+            data.accepted = ''
+            client.post "services/sharing/sendAnswer/", data,
+            (err, res, body) ->
+                res.statusCode.should.equal 400
+                res.body.error.should.equal "Bad request: body is incomplete"
+                done()
+
+        it 'should return an error if the req structure is incorrect: preToken
+        is missing or empty', (done) ->
+            data = _.clone answer
+            data.preToken = ''
+            client.post "services/sharing/sendAnswer/", data,
+            (err, res, body) ->
+                res.statusCode.should.equal 400
+                res.body.error.should.equal "Bad request: body is incomplete"
+                done()
+
+        it 'should return an error if the req structure is incorrect: url is
+        missing or empty', (done) ->
+            data = _.clone answer
+            data.url = null
+            client.post "services/sharing/sendAnswer/", data,
+            (err, res, body) ->
+                res.statusCode.should.equal 400
+                res.body.error.should.equal "Bad request: body is incomplete"
+                done()
+
+        it 'should return an error if the req structure is incorrect: hostUrl
+        is missing or empty', (done) ->
+            data = _.clone answer
+            data.hostUrl = null
+            client.post "services/sharing/sendAnswer/", data,
+            (err, res, body) ->
+                res.statusCode.should.equal 400
+                res.body.error.should.equal "Bad request: body is incomplete"
+                done()
+
+        it 'should return an error if the req structure is incorrect: rules is
+        missing or empty', (done) ->
+            data = _.clone answer
+            data.rules = []
+            client.post "services/sharing/sendAnswer/", data,
+            (err, res, body) ->
+                res.statusCode.should.equal 400
+                res.body.error.should.equal "Bad request: body is incomplete"
+                done()
+
+        it 'should return an error if the req structure is incorrect: a rule is
+        missing an id', (done) ->
+            data = _.clone answer
+            data.rules = [{id: 1, docType: 'event'},{id: '', docType: 'event'}]
+            client.post "services/sharing/sendAnswer/", data,
+            (err, res, body) ->
+                res.statusCode.should.equal 400
+                res.body.error.should.equal "Bad request: incorrect rule
+                    detected"
+                done()
+
+        it 'should return an error if the req structure is incorrect: a rule is
+        missing a docType', (done) ->
+            data = _.clone answer
+            data.rules = [{id: 1, docType: 'event'},{id: 2}]
+            client.post "services/sharing/sendAnswer/", data,
+            (err, res, body) ->
+                res.statusCode.should.equal 400
+                res.body.error.should.equal "Bad request: incorrect rule
+                    detected"
+                done()
+
+        it 'should return an error if addAccess failed', (done) ->
+            data = _.clone answer
+            client.post "services/sharing/sendAnswer/", data,
+            (err, res, body) ->
+                res.body.error.should.equal "Error"
+                done()
+
+        it 'should remove the sharing document if accepted is false and return
+        an error if the document could not be removed', (done) ->
+            # set accepted to false
+            data = _.clone answer
+            data.accepted = false
+
+            # The dbRemoveStub is called during this test, there is a test
+            # inside of it that checks that the correct id is passed
+
+            client.post "services/sharing/sendAnswer/", data,
+            (err, res, body) ->
+                res.body.error.should.equal "db.remove"
+                done()
+
+        it 'should call the next callback if req structure is ok: accepted is
+        false', (done) ->
+            req = body: _.clone answer
+            req.body.accepted = false # simulate refusal
+
+            # Cancel previous stub of remove for one that doesn't fail
+            dbRemoveStub.restore()
+            dbRemoveFnOk = (id, callback) ->
+                callback null
+            dbRemoveStub = sinon.stub db, "remove", dbRemoveFnOk
+
+            sharing.handleRecipientAnswer req, {}, ->
+                should.exist req.share
+                req.share.should.deep.equal req.body
+                done()
+
+        it 'should call the next callback if req structure is ok: accepted is
+        true', (done) ->
+            req = body: _.clone answer # copy of correct structure
+            addAccessStub.restore() # cancel previous stub
+            addAccessFnOk = (access, callback) ->
+                callback null # No error is set, addAccess doesn't fail
+            addAccessStub = sinon.stub libToken, "addAccess", addAccessFnOk
+
+            sharing.handleRecipientAnswer req, {}, ->
+                should.exist req.share
+                should.exist req.share.token
+                req.share.id.should.equal answer.id
+                req.share.shareID.should.equal answer.shareID
+                req.share.preToken.should.equal answer.preToken
+                req.share.accepted.should.equal answer.accepted
+                req.share.url.should.equal answer.url
+                req.share.hostUrl.should.equal answer.hostUrl
+                req.share.rules.should.deep.equal answer.rules
+                done()
+
+
+    describe 'sendAnswer module', ->
+
+        # Correct answer structure expected
+        req = share:
+            {
+                id: 'IdOfTheRecipientShareDocument'
+                shareID: 'IdOfTheSharerShareDocument'
+                accepted: true
+                preToken: 'preToken'
+                url: 'urlOfTheRecipient'
+                hostUrl: 'urlOfTheSharer'
+                rules: [{id: 1, docType: 'event'}, {id: 2, docType: 'event'}]
+                token: 'token'
+            }
+
+        # Stub of notifyTarget module: we make it fail for now, we'll redefine
+        # the stub once we want it to pass
+        notifyTargetFn   = (route, data, callback) ->
+            callback new Error "Sharing.notifyTarget"
+        notifyTargetStub = {}
+
+        beforeEach (done) ->
+            notifyTargetStub = sinon.stub Sharing, "notifyTarget",
+                notifyTargetFn
+            done()
+
+        afterEach (done) ->
+            notifyTargetStub.restore()
+            done()
+
+
+        it 'should return an error if notifyTarget failed', (done) ->
+            sharing.sendAnswer req, {}, (err) ->
+                err.should.deep.equal new Error "Sharing.notifyTarget"
+                done()
+
+        it 'should notify the target', (done) ->
+            sharing.sendAnswer req, {}, ->
+                notifyTargetStub.callCount.should.equal 1
+                done()
+
+        it 'should switch the values of `url` and `hostUrl`', (done) ->
+            # We change the stub for one in which we test the values
+            # transmitted to the `notifyTarget` module
+            notifyTargetStub.restore()
+            notifyTargetFnSpy = (route, data, callback) ->
+                data.url.should.equal req.share.hostUrl
+                data.hostUrl.should.equal req.share.url
+                callback new Error "Sharing.notifyTarget"
+            notifyTargetStub = sinon.stub Sharing, "notifyTarget",
+                notifyTargetFnSpy
+
+            sharing.sendAnswer req, {}, ->
+                done() # tests are done in the stub
+
+        it 'should send success if notifyTarget succeeded', (done) ->
+            # We change the stub for one that succeeds
+            notifyTargetStub.restore()
+            notifyTargetFnOk = (route, data, callback) ->
+                callback null
+            notifyTargetStub = sinon.stub Sharing, "notifyTarget",
+                notifyTargetFnOk
+
+            res =
+                status: (value) ->
+                    value.should.equal 200
+                    send: (obj) ->
+                        obj.should.deep.equal success: true
+                        done()
+
+            sharing.sendAnswer req, res, ->
                 done()

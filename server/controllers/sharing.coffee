@@ -1,6 +1,5 @@
 Sharing = require '../lib/sharing'
 async = require "async"
-_ = require "lodash"
 crypto = require "crypto"
 util = require 'util'
 log = require('printit')
@@ -46,8 +45,8 @@ generateToken = (length) ->
 module.exports.create = (req, res, next) ->
     share = req.body
 
-    # Check that the body isn't empty
-    unless share? and not _.isEmpty(share)
+    # Check that the body isn't empty: it exists and has at least 1 element
+    unless share? and Object.keys(share).length > 0
         err = new Error "Bad request: no body"
         err.status = 400
         return next err
@@ -202,27 +201,29 @@ module.exports.sendDeleteNotifications = (req, res, next) ->
 #                with their docTypes.
 module.exports.handleRecipientAnswer = (req, res, next) ->
 
-    if not req.body?
-        err = new Error "Bad request"
+    if not req.body? or Object.keys(req.body).length == 0
+        err = new Error "Bad request: body is missing"
         err.status = 400
         return next err
 
     share = req.body
 
-    # Check share structure
-    unless share.id? and share.id isnt "" and share.shareID? and
-            share.shareID isnt "" and share.accepted? and
-            share.accepted isnt "" and share.url? and share.url isnt "" and
-            share.hostUrl? and share.hostUrl isnt "" and share.url? and
-            share.rules?.length > 0
-        err = new Error "Bad request"
+    # Check share structure: each element must not be null/undefined/empty
+    if not share.id?    or share.id is ''          or
+    not share.shareID?  or share.shareID is ''     or
+    not share.preToken? or share.preToken is ''    or
+    not share.accepted? or share.accepted is ''    or
+    not share.url?      or share.url is ''         or
+    not share.hostUrl?  or share.hostUrl is ''     or
+    not share.rules?    or not share.rules.length? or share.rules.length == 0
+        err = new Error "Bad request: body is incomplete"
         err.status = 400
         return next err
-    # ...and rules' as well
+    # Same for the rules structure: each rule must have an id and a docType
     for rule in share.rules
-        unless rule.id? and rule.id isnt "" and rule.docType? and
-                rule.docType isnt ""
-            err = new Error "Bad request"
+        if not rule.id?   or rule.id is ''      or
+        not rule.docType? or rule.docType is ''
+            err = new Error "Bad request: incorrect rule detected"
             err.status = 400
             return next err
 
@@ -235,9 +236,6 @@ module.exports.handleRecipientAnswer = (req, res, next) ->
             rules: share.rules
 
         libToken.addAccess access, (err, doc) ->
-            # XXX We cannot test if addAccess failed: the doc returned
-            # corresponds to the parameter "access" and err is always null no
-            # matter what
             return next err if err?
 
             share.token = access.password
