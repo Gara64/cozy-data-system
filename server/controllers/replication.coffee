@@ -3,6 +3,9 @@ checkPermissions = require('../helpers/utils').checkReplicationPermissionsSync
 request = require 'request'
 url = require 'url'
 through = require 'through'
+log = require('printit')
+    date: true
+    prefix: 'replication'
 
 getCredentialsHeader = ->
     username = db.connection.auth.username
@@ -118,6 +121,8 @@ module.exports.proxy = (req, res, next) ->
                         if headers['Content-Type'] is 'application/json'
                             try
                                 doc = JSON.parse Buffer.concat(data)
+                            catch err
+                                log.info "Buffer isn't a JSON valid."
                         else
                             content = Buffer.concat(data).toString()
                             [err, doc] = retrieveJsonDocument content
