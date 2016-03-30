@@ -642,11 +642,18 @@ describe "Sharing controller tests:", ->
                 notifyTargetStub.callCount.should.equal 1
                 done()
 
-        it 'should switch the values of `url` and `hostUrl`', (done) ->
+        it 'should switch the values of `url` and `hostUrl` and send the
+        correct values', (done) ->
             # We change the stub for one in which we test the values
             # transmitted to the `notifyTarget` module
             notifyTargetStub.restore()
             notifyTargetFnSpy = (route, data, callback) ->
+                data.shareID.should.equal req.share.shareID
+                data.accepted.should.equal req.share.accepted
+                data.preToken.should.equal req.share.preToken
+                data.token.should.equal req.share.token
+                should.not.exist data.id
+                should.not.exist data.rules
                 data.url.should.equal req.share.hostUrl
                 data.hostUrl.should.equal req.share.url
                 callback new Error "Sharing.notifyTarget"
@@ -672,4 +679,211 @@ describe "Sharing controller tests:", ->
                         done()
 
             sharing.sendAnswer req, res, ->
+                done()
+
+
+    describe 'validateTarget module', ->
+
+        # Expected answer structure
+        req = body: {
+            shareID: 'IdOfTheSharerShareDocument'
+            accepted: true
+            preToken: 'preToken'
+            url: 'urlOfTheSharer'         # those two fields were...
+            hostUrl: 'urlOfTheRecipient'  # ...switched
+            token: 'token'
+        }
+
+        doc_orig =
+            _id: 12345
+            targets: [{url: 'foo', preToken: 'preTokenFoo', token: 'tok1'},\
+                      {url: 'bar', preToken: 'preTokenBar', token: 'tok2'},
+                      {url: 'urlOfTheRecipient', preToken: 'preToken'}]
+            rules: [{id: 1, docType: 'event'}, {id: 2, docType: 'event'}]
+            continuous: false
+
+        # Stubs of get/merge db methods
+        dbGetStub = {}
+        dbMergeStub = {}
+
+        # XXX Why the "each"?
+        beforeEach (done) ->
+            dbGetStub = sinon.stub db, "get", (id, callback) ->
+                doc_copy = _.cloneDeep doc_orig
+                callback null, doc_copy
+
+            dbMergeStub = sinon.stub db, "merge", (id, doc, callback) ->
+                callback new Error "db.merge"
+
+            done()
+
+        afterEach (done) ->
+            dbGetStub.restore()
+            dbMergeStub.restore()
+            done()
+
+
+        it 'should return an error if the body is missing', (done) ->
+            data = {}
+            client.post 'services/sharing/answer/', data, (err, res, body) ->
+                res.body.error.should.equal "Bad request: body is empty"
+                res.statusCode.should.equal 400
+                done()
+
+        it 'should return an error if the body is incomplete: shareID is
+        missing/empty', (done) ->
+            data = _.clone req.body
+            data.shareID = null
+            client.post 'services/sharing/answer/', data, (err, res, body) ->
+                res.body.error.should.equal "Bad request: body is incomplete"
+                res.statusCode.should.equal 400
+                done()
+
+        it 'should return an error if the body is incomplete: hostUrl is
+        missing/empty', (done) ->
+            data = _.clone req.body
+            data.hostUrl = undefined
+            client.post 'services/sharing/answer/', data, (err, res, body) ->
+                res.body.error.should.equal "Bad request: body is incomplete"
+                res.statusCode.should.equal 400
+                done()
+
+        it 'should return an error if the body is incomplete: accepted is
+        missing/empty', (done) ->
+            data = _.clone req.body
+            data.accepted = ''
+            client.post 'services/sharing/answer/', data, (err, res, body) ->
+                res.body.error.should.equal "Bad request: body is incomplete"
+                res.statusCode.should.equal 400
+                done()
+
+        it 'should return an error if the body is incomplete: preToken is
+        missing/empty', (done) ->
+            data = _.clone req.body
+            data.preToken = null
+            client.post 'services/sharing/answer/', data, (err, res, body) ->
+                res.body.error.should.equal "Bad request: body is incomplete"
+                res.statusCode.should.equal 400
+                done()
+
+        it 'should return an error if the body is incomplete: token is
+        missing/empty', (done) ->
+            data = _.clone req.body
+            data.token = ''
+            client.post 'services/sharing/answer/', data, (err, res, body) ->
+                res.body.error.should.equal "Bad request: body is incomplete"
+                res.statusCode.should.equal 400
+                done()
+
+        it 'should return an error if db.get failed', (done) ->
+            dbGetStub.restore() # cancel default stub
+            dbGetStub = sinon.stub db, "get", (id, callback) ->
+                callback new Error "db.get"
+
+            sharing.validateTarget req, {}, (err) ->
+                err.should.deep.equal new Error "db.get"
+                done()
+
+        it 'should return an error if the target was not found for this share',
+        (done) ->
+            dbGetStub.restore() # cancel default stub that fails
+            # define a new stub that does not contain the url of the answer
+            # structure
+            dbGetStub = sinon.stub db, "get", (id, callback) ->
+                doc = targets: [{url: 'foo'}, {url: 'bar'}, {url: 'baz'}]
+                callback null, doc
+
+            sharing.validateTarget req, {}, (err) ->
+                notFoundErr = new Error "urlOfTheRecipient not found for this
+                    sharing"
+                notFoundErr.status = 404
+                err.should.deep.equal notFoundErr
+                done()
+
+        it 'should return an error if the preToken for the target does not
+        match the one stored in the database', (done) ->
+            dbGetStub.restore() # cancel default stub
+            dbGetStub = sinon.stub db, "get", (id, callback) ->
+                doc = targets: [{url: 'foo', preToken: 'preTokenFoo'},\
+                                {url: 'urlOfTheRecipient', preToken: 'nope'}]
+                callback null, doc
+
+            sharing.validateTarget req, {}, (err) ->
+                unauthErr = new Error "Unauthorized"
+                unauthErr.status = 401
+                err.should.deep.equal unauthErr
+                done()
+
+        it 'should return an error if the target has already answered',
+        (done) ->
+            dbGetStub.restore() # cancel default stub
+            dbGetStub = sinon.stub db, "get", (id, callback) ->
+                doc = targets: [{url: 'foo', preToken: 'preTokenFoo',\
+                                 token: 'token'},
+                                {url: 'urlOfTheRecipient',\
+                                 preToken: 'preToken', token: 'token'}]
+                callback null, doc
+
+            sharing.validateTarget req, {}, (err) ->
+                bisErr = new Error "The answer for this sharing has already
+                    been given"
+                bisErr.status = 403
+                err.should.deep.equal bisErr
+                done()
+
+        it 'should return an error if merge failed', (done) ->
+            sharing.validateTarget req, {}, (err) ->
+                err.should.deep.equal new Error "db.merge"
+                done()
+
+        it 'should remove the `preToken` from the `target` structure if the
+        share request was accepted', (done) ->
+            dbMergeStub.restore() # cancel default stub
+            dbMergeFn = (id, doc, callback) ->
+                for target in doc.targets
+                    if target.url is 'urlOfTheRecipient'
+                        should.not.exist target.preToken
+                        should.exist target.token
+                # we don't want the rest of the module to execute so we return
+                # an error
+                callback new Error "db.merge"
+
+            dbMergeStub = sinon.stub db, "merge", dbMergeFn
+
+            sharing.validateTarget req, {}, (err) ->
+                dbMergeStub.callCount.should.equal 1
+                done()
+
+        it 'should remove the target from the `share` document if the share
+        request was denied', (done) ->
+            req_false = _.cloneDeep req
+            req_false.body.accepted = false
+
+            dbMergeStub.restore() # cancel default stub
+            dbMergeFn = (id, doc, callback) ->
+                for target in doc.targets
+                    target.url.should.not.equal req.body.url
+                # call with an error to stop execution of module
+                callback new Error "db.merge"
+
+            dbMergeStub = sinon.stub db, "merge", dbMergeFn
+
+            sharing.validateTarget req, {}, (err) ->
+                dbMergeStub.callCount.should.equal 1
+                done()
+
+        it 'should transmit the correct structure for the next callback',
+        (done) ->
+            dbMergeStub.restore() # cancel default stub
+            dbMergeStub = sinon.stub db, "merge", (id, doc, callback) ->
+                callback null # do nothing and return no error
+
+            sharing.validateTarget req, {}, ->
+                should.exist req.replicate
+                req.replicate.target.url.should.equal req.body.hostUrl
+                should.not.exist req.replicate.target.preToken
+                should.exist req.replicate.target.token
+                req.replicate.id.should.equal doc_orig._id
+                req.replicate.docIDs.should.deep.equal [1, 2]
+                req.replicate.continuous.should.equal doc_orig.continuous
                 done()
