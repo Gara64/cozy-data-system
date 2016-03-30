@@ -257,7 +257,7 @@ module.exports =
             utils.checkPermissionsFactory 'all'
             indexer.removeAll
         ]
-    'data/index/status':
+    'data/index/status/:type':
         get: [
             indexer.indexingStatus
         ]
