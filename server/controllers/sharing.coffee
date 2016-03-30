@@ -318,19 +318,19 @@ module.exports.validateTarget = (req, res, next) ->
         return next err if err?
 
         # Get the answering target
-        tmp = (t for t in doc.targets when t.url is answer.hostUrl)
+        target = (t for t in doc.targets when t.url is answer.hostUrl)
 
         # If we had parenthesis around the comprehension above then it's an
         # array that is returned. Since we only want one element if the length
         # of the array isn't 1 then we have a problem
-        unless tmp.length is 1
+        unless target.length is 1
             err = new Error answer.hostUrl + " not found for this sharing"
             err.status = 404
             return next err
 
         # As explained in the comments above we only have one element, that we
-        # extract in another variable for ease of use
-        target = tmp[0]
+        # extract
+        target = target[0]
 
         # Check if the preToken is correct
         if not target.preToken? or target.preToken isnt answer.preToken
