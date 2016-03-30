@@ -392,7 +392,7 @@ module.exports.replicate = (req, res, next) ->
                 next err
             # The repID is needed if continuous
             else if replicate.continuous and not repID?
-                err = "Replication error"
+                err = new Error "Replication error"
                 err.status = 500
                 next err
             else
@@ -406,7 +406,7 @@ module.exports.replicate = (req, res, next) ->
                         target = (t for t in doc.targets when \
                             t.url is targetUrl)
                          # Get index of the target and update it
-                        i = doc.targets.indexOf target
+                        i = doc.targets.indexOf target[0]
                         doc.targets[i].repID = repID
 
                         db.merge replicate.id, doc, (err, result) ->

@@ -44,7 +44,7 @@ describe "Sharing controller tests:", ->
                 done()
 
         it 'should return a bad request if no target is specified', (done) ->
-            data = _.clone share
+            data = _.cloneDeep share
             data.targets = []
             client.post 'services/sharing/', data, (err, res, body) ->
                 res.statusCode.should.equal 400
@@ -53,7 +53,7 @@ describe "Sharing controller tests:", ->
 
         it 'should return a bad request if a target does not have an url',
         (done) ->
-            data = _.clone share
+            data = _.cloneDeep share
             data.targets = [{url: 'url1.com'}, {url: 'url2.com'},
                 {url : ''}]
 
@@ -63,7 +63,7 @@ describe "Sharing controller tests:", ->
                 done()
 
         it 'should return a bad request if no rules are specified', (done) ->
-            data = _.clone share
+            data = _.cloneDeep share
             data.rules = []
             client.post 'services/sharing/', data, (err, res, body) ->
                 res.statusCode.should.equal 400
@@ -72,7 +72,7 @@ describe "Sharing controller tests:", ->
 
         it 'should return a bad request if a rule does not have an id',
         (done) ->
-            data = _.clone share
+            data = _.cloneDeep share
             data.rules = [{id: 1, docType: 'event'}, \
                           {id: '', docType: 'Tasky'}]
             client.post 'services/sharing/', data, (err, res, body) ->
@@ -82,7 +82,7 @@ describe "Sharing controller tests:", ->
 
         it 'should return a bad request if a rule does not have a docType',
         (done) ->
-            data = _.clone share
+            data = _.cloneDeep share
             data.rules = [{id: 1, docType: 'event'}, {id: 2}]
             client.post 'services/sharing/', data, (err, res, body) ->
                 res.statusCode.should.equal 400
@@ -91,7 +91,7 @@ describe "Sharing controller tests:", ->
 
         it 'should set the shareID, the docType to "sharing" and generate
         preTokens', (done) ->
-            req = body: _.clone share
+            req = body: _.cloneDeep share
             res = {}
             sharing.create req, res, ->
                 req.share.should.exist
@@ -137,7 +137,7 @@ describe "Sharing controller tests:", ->
 
 
         it 'should send a request to all targets', (done) ->
-            req = share: _.clone share
+            req = share: _.cloneDeep share
 
             # XXX This is ugly...is there a better way? (or is it not ugly?)
             #
@@ -160,7 +160,7 @@ describe "Sharing controller tests:", ->
                 done()
 
         it 'should define a correct request', (done) ->
-            req = share: _.clone share
+            req = share: _.cloneDeep share
 
             # XXX That's probably is ugly
             # stub `res.status(200).send success:true` call
@@ -186,7 +186,7 @@ describe "Sharing controller tests:", ->
                 done()
 
         it 'should send the requests on services/sharing/request', (done) ->
-            req = share: _.clone share
+            req = share: _.cloneDeep share
             # we only let one target: spyRoute is set with it
             req.share.targets = [{url: 'url1.com', preToken: 'preToken1'}]
 
@@ -215,7 +215,7 @@ describe "Sharing controller tests:", ->
             notifyStub = sinon.stub Sharing, "notifyTarget", stubFn
 
             # We want a correct structure
-            req = share: _.clone share
+            req = share: _.cloneDeep share
             res = {} # no need to mimic Express since it should not get called
 
             sharing.sendSharingRequests req, res, (err) ->
@@ -453,7 +453,7 @@ describe "Sharing controller tests:", ->
 
         it 'should return an error if the req structure is incorrect: id is
         missing or empty', (done) ->
-            data = _.clone answer
+            data = _.cloneDeep answer
             data.id = undefined
             client.post "services/sharing/sendAnswer/", data,
             (err, res, body) ->
@@ -463,7 +463,7 @@ describe "Sharing controller tests:", ->
 
         it 'should return an error if the req structure is incorrect: shareID
         is missing or empty', (done) ->
-            data = _.clone answer
+            data = _.cloneDeep answer
             data.shareID = null
             client.post "services/sharing/sendAnswer/", data,
             (err, res, body) ->
@@ -473,7 +473,7 @@ describe "Sharing controller tests:", ->
 
         it 'should return an error if the req structure is incorrect: accepted
         is missing or empty', (done) ->
-            data = _.clone answer
+            data = _.cloneDeep answer
             data.accepted = ''
             client.post "services/sharing/sendAnswer/", data,
             (err, res, body) ->
@@ -483,7 +483,7 @@ describe "Sharing controller tests:", ->
 
         it 'should return an error if the req structure is incorrect: preToken
         is missing or empty', (done) ->
-            data = _.clone answer
+            data = _.cloneDeep answer
             data.preToken = ''
             client.post "services/sharing/sendAnswer/", data,
             (err, res, body) ->
@@ -493,7 +493,7 @@ describe "Sharing controller tests:", ->
 
         it 'should return an error if the req structure is incorrect: url is
         missing or empty', (done) ->
-            data = _.clone answer
+            data = _.cloneDeep answer
             data.url = null
             client.post "services/sharing/sendAnswer/", data,
             (err, res, body) ->
@@ -503,7 +503,7 @@ describe "Sharing controller tests:", ->
 
         it 'should return an error if the req structure is incorrect: hostUrl
         is missing or empty', (done) ->
-            data = _.clone answer
+            data = _.cloneDeep answer
             data.hostUrl = null
             client.post "services/sharing/sendAnswer/", data,
             (err, res, body) ->
@@ -513,7 +513,7 @@ describe "Sharing controller tests:", ->
 
         it 'should return an error if the req structure is incorrect: rules is
         missing or empty', (done) ->
-            data = _.clone answer
+            data = _.cloneDeep answer
             data.rules = []
             client.post "services/sharing/sendAnswer/", data,
             (err, res, body) ->
@@ -523,7 +523,7 @@ describe "Sharing controller tests:", ->
 
         it 'should return an error if the req structure is incorrect: a rule is
         missing an id', (done) ->
-            data = _.clone answer
+            data = _.cloneDeep answer
             data.rules = [{id: 1, docType: 'event'},{id: '', docType: 'event'}]
             client.post "services/sharing/sendAnswer/", data,
             (err, res, body) ->
@@ -534,7 +534,7 @@ describe "Sharing controller tests:", ->
 
         it 'should return an error if the req structure is incorrect: a rule is
         missing a docType', (done) ->
-            data = _.clone answer
+            data = _.cloneDeep answer
             data.rules = [{id: 1, docType: 'event'},{id: 2}]
             client.post "services/sharing/sendAnswer/", data,
             (err, res, body) ->
@@ -544,7 +544,7 @@ describe "Sharing controller tests:", ->
                 done()
 
         it 'should return an error if addAccess failed', (done) ->
-            data = _.clone answer
+            data = _.cloneDeep answer
             client.post "services/sharing/sendAnswer/", data,
             (err, res, body) ->
                 res.body.error.should.equal "Error"
@@ -553,7 +553,7 @@ describe "Sharing controller tests:", ->
         it 'should remove the sharing document if accepted is false and return
         an error if the document could not be removed', (done) ->
             # set accepted to false
-            data = _.clone answer
+            data = _.cloneDeep answer
             data.accepted = false
 
             # The dbRemoveStub is called during this test, there is a test
@@ -566,7 +566,7 @@ describe "Sharing controller tests:", ->
 
         it 'should call the next callback if req structure is ok: accepted is
         false', (done) ->
-            req = body: _.clone answer
+            req = body: _.cloneDeep answer
             req.body.accepted = false # simulate refusal
 
             # Cancel previous stub of remove for one that doesn't fail
@@ -582,7 +582,7 @@ describe "Sharing controller tests:", ->
 
         it 'should call the next callback if req structure is ok: accepted is
         true', (done) ->
-            req = body: _.clone answer # copy of correct structure
+            req = body: _.cloneDeep answer # copy of correct structure
             addAccessStub.restore() # cancel previous stub
             addAccessFnOk = (access, callback) ->
                 callback null # No error is set, addAccess doesn't fail
@@ -706,7 +706,6 @@ describe "Sharing controller tests:", ->
         dbGetStub = {}
         dbMergeStub = {}
 
-        # XXX Why the "each"?
         beforeEach (done) ->
             dbGetStub = sinon.stub db, "get", (id, callback) ->
                 doc_copy = _.cloneDeep doc_orig
@@ -732,7 +731,7 @@ describe "Sharing controller tests:", ->
 
         it 'should return an error if the body is incomplete: shareID is
         missing/empty', (done) ->
-            data = _.clone req.body
+            data = _.cloneDeep req.body
             data.shareID = null
             client.post 'services/sharing/answer/', data, (err, res, body) ->
                 res.body.error.should.equal "Bad request: body is incomplete"
@@ -741,7 +740,7 @@ describe "Sharing controller tests:", ->
 
         it 'should return an error if the body is incomplete: hostUrl is
         missing/empty', (done) ->
-            data = _.clone req.body
+            data = _.cloneDeep req.body
             data.hostUrl = undefined
             client.post 'services/sharing/answer/', data, (err, res, body) ->
                 res.body.error.should.equal "Bad request: body is incomplete"
@@ -750,7 +749,7 @@ describe "Sharing controller tests:", ->
 
         it 'should return an error if the body is incomplete: accepted is
         missing/empty', (done) ->
-            data = _.clone req.body
+            data = _.cloneDeep req.body
             data.accepted = ''
             client.post 'services/sharing/answer/', data, (err, res, body) ->
                 res.body.error.should.equal "Bad request: body is incomplete"
@@ -759,7 +758,7 @@ describe "Sharing controller tests:", ->
 
         it 'should return an error if the body is incomplete: preToken is
         missing/empty', (done) ->
-            data = _.clone req.body
+            data = _.cloneDeep req.body
             data.preToken = null
             client.post 'services/sharing/answer/', data, (err, res, body) ->
                 res.body.error.should.equal "Bad request: body is incomplete"
@@ -768,7 +767,7 @@ describe "Sharing controller tests:", ->
 
         it 'should return an error if the body is incomplete: token is
         missing/empty', (done) ->
-            data = _.clone req.body
+            data = _.cloneDeep req.body
             data.token = ''
             client.post 'services/sharing/answer/', data, (err, res, body) ->
                 res.body.error.should.equal "Bad request: body is incomplete"
@@ -881,9 +880,159 @@ describe "Sharing controller tests:", ->
             sharing.validateTarget req, {}, ->
                 should.exist req.replicate
                 req.replicate.target.url.should.equal req.body.hostUrl
+                # `preToken` should not exist and `token` should since
+                # `accepted` is true
                 should.not.exist req.replicate.target.preToken
                 should.exist req.replicate.target.token
                 req.replicate.id.should.equal doc_orig._id
-                req.replicate.docIDs.should.deep.equal [1, 2]
+                req.replicate.docIDs.should.deep.equal (r.id for r in \
+                    doc_orig.rules)
                 req.replicate.continuous.should.equal doc_orig.continuous
+                done()
+
+
+    describe 'replicate module', ->
+
+        # Correct structures expected
+        req = replicate: { id: 12345,\
+                           target: {url: 'urlOfTheRecipient', token: 'token'},
+                           docIDS: [1, 2],
+                           continuous: true }
+        doc_orig =
+            _id: 12345
+            targets: [{url: 'foo', preToken: 'preTokenFoo'},\
+                      {url: 'bar', preToken: 'preTokenBar'},
+                      {url: 'urlOfTheRecipient', token: 'token'}]
+            rules: [{id: 1, docType: 'event'}, {id: 2, docType: 'event'}]
+            continuous: true
+
+        # stubs
+        replicateDocsStub = {}
+        dbMergeStub       = {}
+        dbGetStub         = {}
+        res               = {}
+
+        # Hooks
+        beforeEach (done) ->
+            replicateDocsStub = sinon.stub Sharing, "replicateDocs", \
+                (replicate, callback) ->
+                    callback null, 987 # return no error and a `repID`
+
+            dbMergeStub = sinon.stub db, "merge", (id, doc, callback) ->
+                callback null # return no error
+
+            dbGetStub = sinon.stub db, "get", (id, callback) ->
+                callback null, _.cloneDeep doc_orig # return no error
+
+            done()
+
+        afterEach (done) ->
+            replicateDocsStub.restore()
+            dbMergeStub.restore()
+            dbGetStub.restore()
+            done()
+
+        it 'should replicate only if a token exists', (done) ->
+            req_no_token = _.cloneDeep req
+            delete req_no_token.replicate.target.token
+
+            res =
+                status: (value) ->
+                    value.should.equal 200
+                    send: (obj) ->
+                        obj.should.deep.equal success: true
+                        # replicateDocs should not be called if there is no
+                        # token
+                        replicateDocsStub.callCount.should.equal 0
+                        done()
+
+            sharing.replicate req_no_token, res, ->
+                done()
+
+        it 'should return an error if `Sharing.replicateDocs` failed',
+        (done) ->
+            replicateDocsStub.restore() # cancel default stub
+            replicateDocsStub = sinon.stub Sharing, "replicateDocs", \
+                (replicate, callback) ->
+                    callback new Error "Sharing.replicateDocs"
+
+            sharing.replicate req, res, (err) ->
+                err.should.deep.equal new Error "Sharing.replicateDocs"
+                done()
+
+        it 'should return an error if the replication is continuous but no
+        `repID` was returned by `Sharing.replicateDocs`', (done) ->
+            replicateDocsStub.restore() # cancel default stub
+            replicateDocsStub = sinon.stub Sharing, "replicateDocs", \
+                (replicate, callback) ->
+                    callback null # return no error and no `repID`
+
+            sharing.replicate req, res, (err) ->
+                errRep = new Error "Replication error"
+                errRep.status = 500
+
+                err.should.deep.equal errRep
+                done()
+
+        it 'should return an error if `db.get` failed', (done) ->
+            dbGetStub.restore()
+            dbGetStub = sinon.stub db, "get", (id, callback) ->
+                callback new Error "db.get"
+
+            sharing.replicate req, res, (err) ->
+                err.should.deep.equal new Error "db.get"
+                done()
+
+        it 'should return an error if the `db.merge` failed', (done) ->
+            dbMergeStub.restore() # cancel default stub
+            dbMergeStub = sinon.stub db, "merge", (id, doc, callback) ->
+                callback new Error "db.merge" # return an error...!
+
+            sharing.replicate req, res, (err) ->
+                err.should.deep.equal new Error "db.merge"
+                done()
+
+        it 'should update the `target` structure if the replication is
+        continuous', (done) ->
+            dbMergeStub.restore() # cancel default stub
+            dbMergeStub = sinon.stub db, "merge", (id, doc, callback) ->
+                for target in doc.targets
+                    if target.url is req.replicate.target.url
+                        # `987` is the repID in the default stub
+                        target.repID.should.equal 987
+                    else
+                        should.not.exist target.repID
+                # return an error to prevent the rest of the code from
+                # executing
+                callback new Error "db.merge"
+
+            sharing.replicate req, res, ->
+                done()
+
+        it 'should return success if the replication is continuous and the
+        `Sharing.replicateDocs` as well as the `db.merge` succeeded', (done) ->
+            res =
+                status: (value) ->
+                    value.should.equal 200
+                    send: (obj) ->
+                        obj.should.deep.equal success: true
+                        done()
+
+            sharing.replicate req, res, ->
+                done()
+
+        it 'should return success if the replication is not continuous and the
+        `Sharing.replicateDocs` succeeded', (done) ->
+            req_no_continuous = _.cloneDeep req
+            req_no_continuous.replicate.continuous = false
+
+            res =
+                status: (value) ->
+                    value.should.equal 200
+                    send: (obj) ->
+                        obj.should.deep.equal success: true
+                        dbGetStub.callCount.should.equal 0
+                        done()
+
+            sharing.replicate req_no_continuous, res, ->
                 done()
