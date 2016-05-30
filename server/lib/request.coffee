@@ -245,10 +245,21 @@ initializeDSView = (callback) ->
                 map: """
                 function(doc) {
                     if(doc.docType && doc.docType.toLowerCase() === "sharing") {
-                        return emit(doc._id, doc);
+                        return emit(doc._id, null);
                     }
                 }
                 """
+            byShareID:
+                map: """
+                function(doc) {
+                    if(doc.docType && doc.docType.toLowerCase() === "sharing") {
+                        if(doc.shareID) {
+                            return emit(doc.shareID, doc._id);
+                        }
+                    }
+                }
+                """
+
 
         indexdefinition:
             all:
