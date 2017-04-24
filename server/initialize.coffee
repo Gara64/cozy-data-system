@@ -19,6 +19,6 @@ module.exports = (app, server, callback) ->
                     # Patch: 24/03/15
                     init.addAccesses (err) ->
                         log.error err if err?
-                        indexer.initialize (err) ->
-                            log.error err if err?
-                            callback app, server if callback?
+                        #indexer.initialize (err) ->
+                        #    log.error err if err?
+                        callback app, server if callback?

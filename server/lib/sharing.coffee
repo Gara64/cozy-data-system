@@ -9,6 +9,154 @@ user = new User()
 
 replications = {}
 
+# Contains all the sharing rules
+# Avoid to request CouchDB for each document
+rules = []
+
+
+
+# ---------------------------- DEMO -----------------------
+
+# Map the inserted document against all the sharing rules
+# If one or several mapping are trigerred, the result {id, shareID, userParams}
+# will be inserted in PlugDB as a Doc and/or a User
+module.exports.evalInsert = (doc, id, callback) ->
+    console.log 'doc insert : '  + JSON.stringify doc
+
+    #Particular case for sharing rules
+    if doc.docType is 'sharingrule'
+        createRule doc, id, (err) ->
+            callback err
+    else
+        mapDocInRules doc, id, (err, mapResults) ->
+            # mapResults : [ doc: {docID, userID, shareID, userParams, binaries},
+            #                user: {docID, userID, shareID, userParams, binaries}]
+            return callback err if err?
+
+            console.log 'map results : ' + JSON.stringify(mapResults)
+            return callback err
+            ###
+            # Serial loop, to avoid parallel db access
+            async.eachSeries mapResults, insertResults, (err) ->
+                return callback err if err?
+
+                console.log 'mapping results insert : ' + JSON.stringify mapResults
+                matchAfterInsert mapResults, (err, acls) ->
+                    #acl :
+                    #console.log 'acls : ' + JSON.stringify acls
+
+                    return callback err if err?
+                    return callback null unless acls? and acls.length > 0
+
+
+                    startShares acls, (err) ->
+                        callback err
+            ###
+
+
+# For each rule, evaluates if the document is correctly filtered/mapped
+# as a document and/or a user
+mapDocInRules = (doc, id, callback) ->
+
+    # Evaluate a rule for the doc
+    evalRule = (rule, _callback) ->
+
+        mapResult = {}
+
+        # Save the result of the mapping
+        saveResult = (id, shareID, userParams, binaries, isDoc) ->
+            res = {}
+            if isDoc then res.docID = id else res.userID = id
+            res.shareID = shareID
+            res.userParams = userParams
+            res.binaries = binaries
+            if isDoc then mapResult.doc = res else mapResult.user = res
+
+
+        filterDoc = rule.filterDoc
+        filterUser = rule.filterUser
+
+        # Evaluate the doc filter
+        mapDoc doc, id, rule.id, filterDoc, (isDocMaped) ->
+            if isDocMaped
+                console.log 'doc maped !! '
+                binIds = getbinariesIds doc
+                saveResult id, rule.id, filterDoc.userParam, binIds, true
+
+            # Evaluate the user filter
+            mapDoc doc, id, rule.id, filterUser, (isUserMaped) ->
+                if isUserMaped
+                    console.log 'user maped !! '
+                    binIds = getbinariesIds doc
+                    saveResult id, rule.id, filterUser.userParam, binIds, false
+
+                #console.log 'map result : ' + JSON.stringify mapResult
+                if not mapResult.doc? && not mapResult.user?
+                    _callback null, null
+                else
+                    _callback null, mapResult
+
+    # Evaluate all the rules
+    # mapResults : [ {docID, userID, shareID, userParams} ]
+    async.map rules, evalRule, (err, mapResults) ->
+        # Convert to array and remove null results
+        mapResults = Array.prototype.slice.call( mapResults )
+        removeNullValues mapResults
+        callback err, mapResults
+
+# Generic map : evaluate the rule in the filter against the doc
+mapDoc = (doc, docID, shareID, filter, callback) ->
+    console.log "eval " + filter.rule
+    console.log "on " + JSON.stringify(doc)
+    if eval filter.rule
+        callback true
+    else
+        callback false
+
+removeNullValues = (array) ->
+    if array?
+        for i in [array.length-1..0]
+            array.splice(i, 1) if array[i] is null
+
+# Particular case at the doc evaluation where a new rule is inserted
+createRule = (doc, id, callback) ->
+    ###
+    plug.insertShare id, doc.name, (err) ->
+        if err?
+            callback err
+        else
+    ###
+    rule =
+        _id: id
+        name: doc.name
+        filterDoc: doc.filterDoc
+        filterUser: doc.filterUser
+    saveRule rule
+    console.log 'rule inserted'
+    callback null
+
+
+# Save the sharing rule in RAM
+saveRule = (rule, callback) ->
+    id = rule._id
+    name = rule.name
+    filterDoc = rule.filterDoc
+    filterUser = rule.filterUser
+    activeReplications = rule.activeReplications if rule.activeReplications
+    rules.push {id, name, filterDoc, filterUser, activeReplications}
+
+
+# Called at the DS initialization
+module.exports.initRules = (callback) ->
+    db.view 'sharingrule/all', (err, rules) ->
+        return callback new Error("Error in view") if err?
+        rules.forEach (rule) ->
+            saveRule rule
+
+        callback()
+
+# ------------------------ END DEMO
+
 
 # Add https in case the protocol is not specified in the url
 addProtocol = (url) ->
@@ -78,7 +226,6 @@ handleNotifyResponse = (err, result, body, callback) ->
         callback err
     else
         callback()
-
 
 # Send a notification to a recipient url on the specified path
 # A successful request is expected to return a 200 HTTP status

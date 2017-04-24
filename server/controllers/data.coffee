@@ -4,6 +4,7 @@ db = require('../helpers/db_connect_helper').db_connect()
 dbHelper = require '../lib/db_remove_helper'
 encryption = require '../lib/encryption'
 account = require './accounts'
+sharing = require '../lib/sharing'
 
 ## Before and after methods
 
@@ -16,12 +17,12 @@ module.exports.encryptFields = (req, res, next) ->
         return next error
 
     req.body.password = password if password?
-    
+
     try
         req.body = encryption.encryptNeededFields req.body
     catch error
         return next error
-        
+
     next()
 
 # Decrypt data in field password, and every field which name matches
@@ -39,7 +40,7 @@ module.exports.decryptFields = (req, res, next) ->
         req.doc = encryption.decryptNeededFields req.doc
     catch
         # Do nothing with the error
-        
+
     next()
 
 ## Actions
@@ -91,12 +92,25 @@ module.exports.create = (req, res, next) ->
                         next err
                     else
                         res.status(201).send _id: doc.id
+                        
+                        console.log "go eval insert"
+                         # Eval the doc against the sharing rules
+                        sharing.evalInsert req.body, doc.id, (err) ->
+                            if err?
+                                console.log 'Eval error : ' + JSON.stringify err
+
     else
         db.save req.body, (err, doc) ->
             if err
                 next err
             else
                 res.status(201).send _id: doc.id
+
+                console.log "go eval insert 2"
+                sharing.evalInsert req.body, doc.id, (err) ->
+                    if err?
+                        console.log 'Eval error : ' + JSON.stringify err
+
 
 # PUT /data/:id/
 # this doesn't take care of conflict (erase DB with the sent value)
