@@ -92,7 +92,7 @@ module.exports.create = (req, res, next) ->
                         next err
                     else
                         res.status(201).send _id: doc.id
-                        
+
                         console.log "go eval insert"
                          # Eval the doc against the sharing rules
                         sharing.evalInsert req.body, doc.id, (err) ->
@@ -146,6 +146,8 @@ module.exports.softdelete = (req, res, next) ->
         if err
             next err
         else
+            sharing.evalDelete req.params.id, (err) ->
+                
             res.status(204).send success: true
             next()
 
