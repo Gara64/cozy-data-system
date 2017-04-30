@@ -29,8 +29,8 @@ module.exports.evalInsert = (doc, id, callback) ->
             callback err
     else
         mapDocInRules doc, id, (err, mapResults) ->
-            # mapResults : [ doc: {docID, userID, shareID, userParams, binaries},
-            #                user: {docID, userID, shareID, userParams, binaries}]
+            # mapResults: [ doc: {docID, userID, shareID, userParams, binaries},
+            #              user: {docID, userID, shareID, userParams, binaries}]
             return callback err if err?
 
             console.log 'map results : ' + JSON.stringify(mapResults)
@@ -52,6 +52,29 @@ module.exports.evalInsert = (doc, id, callback) ->
                     startShares acls, (err) ->
                         callback err
             ###
+
+# Handle deleted file: if the id exists in the acl of one the rule, remove it
+module.exports.evalDelete = (id, callback) ->
+    # Check if the id corresponds to a sharing rule
+    rule = getRuleById id
+    # Remove the rule from the array
+    if rule?
+        rules.splice rules.indexOf rule, 1
+        console.log 'rule deleted from array'
+        callback()
+    else
+        async.each rules, (rule, cb) ->
+            if rule.docIDs?
+                if id in rule.docIDs
+                    rule.docIDs.splice rule.docIDs.indexOf id, 1
+                    console.log 'docid removed from rule ' + rule.id
+            if rule.userIDs
+                if id in rule.userIDs
+                    rule.userIDs.splice rule.userIDs.indexOf id, 1
+                    console.log 'userid removed from rule ' + rule.id
+            cb()
+        , (err) ->
+            callback err
 
 
 # For each rule, evaluates if the document is correctly filtered/mapped
@@ -82,14 +105,16 @@ mapDocInRules = (doc, id, callback) ->
                 console.log 'doc maped !! '
                 binIds = getbinariesIds doc
                 saveResult id, rule.id, filterDoc.userParam, binIds, true
-
+                updateRuleDocWithId rule.id, id, true, (err) ->
+                    return callback err if err?
             # Evaluate the user filter
             mapDoc doc, id, rule.id, filterUser, (isUserMaped) ->
                 if isUserMaped
                     console.log 'user maped !! '
                     binIds = getbinariesIds doc
                     saveResult id, rule.id, filterUser.userParam, binIds, false
-
+                    updateRuleDocWithId rule.id, id, false, (err) ->
+                        return callback err if err?
                 #console.log 'map result : ' + JSON.stringify mapResult
                 if not mapResult.doc? && not mapResult.user?
                     _callback null, null
@@ -118,6 +143,36 @@ removeNullValues = (array) ->
         for i in [array.length-1..0]
             array.splice(i, 1) if array[i] is null
 
+getbinariesIds= (doc) ->
+    if doc.binary?
+        ids = (val.id for bin, val of doc.binary)
+        #console.log 'binary ids : ' + JSON.stringify ids
+        return ids
+
+getRuleById = (shareID, callback) ->
+    for rule in rules
+        return rule if rule.id == shareID
+
+# Save a matching docid in the sharingrule doc
+updateRuleDocWithId = (ruleID, id, isDoc, callback) ->
+    db.get ruleID, (err, doc) ->
+        return callback err if err?
+
+        # If no values are set
+        if not doc.docIDs?
+            docIDs = []
+            doc.docIDs = docIDs
+        if not doc.userIDs?
+            userIDs = []
+            doc.userIDs = userIDs
+        if isDoc
+            doc.docIDs.push id
+        else
+            doc.userIDs.push id
+        db.save ruleID, doc, (err, res) ->
+            callback err
+
+
 # Particular case at the doc evaluation where a new rule is inserted
 createRule = (doc, id, callback) ->
     ###
@@ -135,24 +190,15 @@ createRule = (doc, id, callback) ->
     console.log 'rule inserted'
     callback null
 
-
-# Save the sharing rule in RAM
-saveRule = (rule, callback) ->
-    id = rule._id
-    name = rule.name
-    filterDoc = rule.filterDoc
-    filterUser = rule.filterUser
-    activeReplications = rule.activeReplications if rule.activeReplications
-    rules.push {id, name, filterDoc, filterUser, activeReplications}
-
-
 # Called at the DS initialization
 module.exports.initRules = (callback) ->
-    db.view 'sharingrule/all', (err, rules) ->
+    db.view 'sharingrule/all', (err, srules) ->
         return callback new Error("Error in view") if err?
-        rules.forEach (rule) ->
-            saveRule rule
-
+        # Save the rules in RAM
+        srules.forEach (rule) ->
+            rule.id = rule._id
+            rules.push rule
+        console.log "rules : " + JSON.stringify rules
         callback()
 
 # ------------------------ END DEMO
