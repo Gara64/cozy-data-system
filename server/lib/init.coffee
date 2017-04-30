@@ -8,7 +8,7 @@ permissionsManager = require './token'
 thumb = require('./thumb')
 audio = require('./audio')
 initTokens = require('./token').init
-
+sharing = require('./sharing')
 
 defaultPermissions =
     'File':
@@ -141,3 +141,24 @@ exports.removeDocWithoutDocType = (callback) ->
                     log.error err if err
                     cb()
             , callback
+
+
+exports.addSharingRules = (callback) ->
+    sharing.initRules (err) ->
+        if err then callback err else callback()
+
+exports.initPlugDB = (callback) ->
+    plug.init (err) ->
+        if err then callback err else callback()
+
+# TO BE REMOVED : insert the sharing rules in plugdb
+exports.insertSharesPlugDB = (callback) ->
+    if plug.bootStatus() is 50
+        sharing.insertRules (err) ->
+            if err then callback err else callback()
+    else if plug.bootStatus() is 51
+        console.log 'plugdb already init : no rules to insert'
+        callback()
+    else
+        console.log 'plugdb has some troubles'
+        callback()
