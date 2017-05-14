@@ -133,10 +133,22 @@ mapDocInRules = (doc, id, callback) ->
 mapDoc = (doc, docID, shareID, filter, callback) ->
     console.log "eval " + filter.rule
     console.log "on " + JSON.stringify(doc)
-    if eval filter.rule
-        callback true
-    else
-        callback false
+
+    # Quite hideous indeed... But it avoids to crash if we test the indexof on
+    # a non existing attribute. Anyway, storing the rule as a string was not
+    # a very good idea.
+    splits = filter.rule.split(".indexOf")
+    if splits.length > 1
+        sp = splits[0].split(".")
+        if sp.length > 1
+            att = sp[sp.length-1]
+            if doc[att]? && doc[att] isnt ""
+                if eval filter.rule
+                    return callback true
+            else
+                return callback false
+
+    return callback eval(filter.rule)
 
 removeNullValues = (array) ->
     if array?
