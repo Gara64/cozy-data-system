@@ -155,6 +155,8 @@ getRuleById = (shareID, callback) ->
 
 # Save a matching docid in the sharingrule doc
 updateRuleDocWithId = (ruleID, id, isDoc, callback) ->
+    if not ruleID? then return callback()
+
     db.get ruleID, (err, doc) ->
         return callback err if err?
 
@@ -166,9 +168,11 @@ updateRuleDocWithId = (ruleID, id, isDoc, callback) ->
             userIDs = []
             doc.userIDs = userIDs
         if isDoc
-            doc.docIDs.push id
+            console.log 'add doc ' + id
+            doc.docIDs.push {id: id, status: "*"}
         else
-            doc.userIDs.push id
+            console.log 'add user ' + id
+            doc.userIDs.push {id: id, status: "*"}
         db.save ruleID, doc, (err, res) ->
             callback err
 
@@ -186,8 +190,8 @@ createRule = (doc, id, callback) ->
         name: doc.name
         filterDoc: doc.filterDoc
         filterUser: doc.filterUser
-    saveRule rule
-    console.log 'rule inserted'
+    rules.push doc
+    console.log 'rule inserted : ', doc
     callback null
 
 # Called at the DS initialization
