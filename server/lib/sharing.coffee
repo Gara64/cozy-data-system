@@ -162,6 +162,7 @@ getbinariesIds= (doc) ->
         return ids
 
 getRuleById = (shareID, callback) ->
+    console.log 'find ' + shareID + ' in rules ' + JSON.stringify rules
     for rule in rules
         return rule if rule.id == shareID
 
@@ -198,12 +199,12 @@ createRule = (doc, id, callback) ->
         else
     ###
     rule =
-        _id: id
+        id: id
         name: doc.name
         filterDoc: doc.filterDoc
         filterUser: doc.filterUser
-    rules.push doc
-    console.log 'rule inserted : ', doc
+    rules.push rule
+    console.log 'rule inserted : ', rule
     callback null
 
 # Called at the DS initialization

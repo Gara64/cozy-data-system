@@ -147,11 +147,13 @@ module.exports.softdelete = (req, res, next) ->
             next err
         else
             sharing.evalDelete req.params.id, (err) ->
-                
+
             res.status(204).send success: true
             next()
 
 module.exports.delete = (req, res, next) ->
+    sharing.evalDelete req.doc.id, (err) ->
+
     db.remove req.doc.id, (err, doc) ->
         if err
             next err
