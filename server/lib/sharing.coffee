@@ -134,6 +134,8 @@ mapDoc = (doc, docID, shareID, filter, callback) ->
     console.log "eval " + filter.rule
     console.log "on " + JSON.stringify(doc)
 
+    return callback false if not filter.rule?
+
     # Quite hideous indeed... But it avoids to crash if we test the indexof on
     # a non existing attribute. Anyway, storing the rule as a string was not
     # a very good idea.
